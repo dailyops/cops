@@ -1,0 +1,130 @@
+## release flow
+# 1 trigger build flow by webhook in github
+# 2 wait build done
+# 3 rollout
+#
+## For daily update deployment image release
+## input args:
+# 1 kc deployment name: required eg. dklab-ping 
+# 2 kc container name:  optional eg. dklab-ping 
+kc_release(){
+  [ $# -lt 1 ] && echo require kc deployment or service && return 1
+  kc_deployment=$1
+  kc_container=${2:-$kc_deployment}
+
+  old_dk_img=$(kc_deployment_img $kc_deployment)
+  [ -z "$old_dk_img" ] && {
+    echo ERROR: invalid image: $old_dk_img for $kc_deployment 
+    return 2
+  }
+  echo ==old image: $old_dk_img
+
+  img_tag=$(kc_guess_img_tag)
+  [ -z "$img_tag" ] && img_tag=$(gta_ensure_new_tag) 
+  [ -z "$img_tag" ] && return
+
+  build_repo=$(kc_guess_build_repo)
+  dk_img=${docker_img:-$build_repo:$img_tag}
+
+  if [ "$dk_img" = "$old_dk_img" ]; then
+    echo ==$kc_deployment has been running in image: $dk_img  
+    return
+  fi
+
+  if [ -z "$SKIP_REMOTE_STATUS_CHECK" ];then
+    kc_check_remote_status $img_tag || return 3
+  fi
+
+  cmd="kc set image deployment/$kc_deployment $kc_container=$dk_img"
+  echo ==will rollout by run:
+  echo "  $cmd"
+  if [ -z "$OST_KC_SKIP_RELEASE_CONFIRM" ]; then
+    read -p "Are you sure to delopy (input 'yes' or cancel)? " yn
+    [ "yes" = "$yn" ] || { echo Canceled new release; return; }
+  else
+    echo ==warning: skipped release confirm check!
+  fi
+  echo kc set image deployment/$kc_deployment $kc_container=$dk_img
+  # kc rolling-update frontend --image=image:v2
+  echo Congrats for new birth: $dk_img!
+}
+
+# kc_check_remote_status v3.5.17
+kc_check_remote_status(){
+  [ $# -lt 1 ] && echo Error: require img_tag && return 1
+  img_tag=$1
+  git_ref=$img_tag
+  # staging image tag like staging-b076de5
+  if [[ "$img_tag" = "staging-"* ]]; then
+    git_ref=staging
+  fi
+
+  echo ==checking git remote status $git_ref for tag: $img_tag
+  rev=$(git rev-parse $git_ref)
+  remote_rev=$(gta_remote_commit_id $git_ref)
+  if [ "$rev" != "$remote_rev" ];then
+    echo ====ERROR: NOT SYNCED WITH REMOTE!
+    echo "current namespace: $ns --> git ref: $git_ref"
+    echo local git commit:  $rev
+    echo remote git commit: $remote_rev
+    return 2
+  fi
+
+  # 如果指定时间内检查
+  allow_seconds=$(( 3 * 60 * 60 ))
+  # tmp fix
+  #$ git show -s --format=%ct v3.5.17
+  #tag v3.5.17
+  #Tagger: Hooopo Wang <hoooopo@gmail.com>
+  #
+  #3.5.17
+  #1527573420 
+  ref_ts=$(git show -s --format=%ct $git_ref | tail -1)
+  now_ts=$(date +"%s")
+  diff_ts=$(( $now_ts - $ref_ts - $allow_seconds ))
+  if [ $diff_ts -lt 0 ]; then
+    echo ==checking build flow status 
+    bf_id=$(get_bf_id)
+    until dcs_bf_ok $bf_id
+    do
+      echo -n "=>"
+      sleep 8
+    done
+    echo build flow: $(dcs_bf_url $bf_id)
+    #dcs_bf_query $bf_id | jq
+  else
+    echo Skip build flow check! 
+  fi
+}
+
+# 运行环境与git分支对应关系
+# branch      k8s-namespace         get-img
+# staging     staging cluseter      auto guess from git commit id
+# master      production cluster    v.* tag
+kc_guess_img_tag(){
+  ns=$(kc_current_ns)
+  case "$ns" in
+    staging)
+      branch=$(gta_current_branch)
+      if [ "staging" = "$branch" ]; then
+        rev=$(git rev-parse $branch)
+        short_rev=${rev:0:7}
+        #image tag like staging-b076de5
+        echo staging-$short_rev
+      fi
+      ;;
+    production) # for production
+      tag=$(gta_last_tag $image_prefix)
+      echo $tag
+      ;;
+  esac
+}
+
+#daocloud.io/dailyops/dklab:ping6
+kc_guess_build_repo(){
+  [ -n "$build_repo" ] && echo $build_repo && return
+  # from git remote url
+  repo=$(git config remote.origin.url)
+  repo=$(basename $repo .git)
+  echo daocloud.io/dailyops/$repo
+}

@@ -1,0 +1,342 @@
+## k8s utils powered by kubectl
+
+# cluster contexts config as https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/
+kc_set_config(){
+  kc_local_home=~/.kc-kubeconfig
+  if [ -d $kc_local_home ]; then
+    files=$(find $kc_local_home -name '*.conf')
+    if [ -n "$files" ]; then
+      path=$(echo $(ls -1 $kc_local_home/*.conf) | tr ' ' ':')
+      export KUBECONFIG=~/.kube/config:$path
+    fi
+  fi
+}
+
+kc_set_config
+
+kc(){
+  tp=$1
+  case "$tp" in
+  h|help)
+    type $FUNCNAME
+    ;;
+  rc|vi)
+    vi ${BASH_SOURCE[0]}
+    ;;
+  conf)
+    echo KUBECONFIG=$KUBECONFIG
+    ;;
+  desc|event|trace)
+    shift
+    # 获取启动错误信息, event信息
+    kc describe po $(kc_get_pod $@)
+    #kubectl explain
+    ;;
+  ns|env)
+    shift
+    kcns $@
+    ;;
+  po|pod)
+    shift
+    kc get po $@
+    ;;
+  no|node|nodes)
+    shift
+    kc_get_nodes $@
+    ;;
+  log)
+    shift
+    [ $# -lt 1 ] && echo Error: require pod or deployment && return 1
+    kc logs --tail 300 -f $(kc_get_pod $@)
+    ;;
+  dp|deploy)
+    shift
+    kc get deploy $@
+    #kc edit deploy $@
+    ;;
+  ing|ingress)
+    shift
+    kc get ingress --all-namespaces -o wide $@
+    ;; 
+  reload)
+    #kc patch deployment/turbo-api -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"date\":\"`date +'%s'`\"}}}}}" -nproduction
+    shift
+    kc patch deployment $@ -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"reload_date\":\"`date +'%s'`\"}}}}}"
+    # not work, change .metadata
+    #kc annotate --overwrite deploy $@ reload_date=`date +'%s'`
+    ;;
+  reload_date)
+    shift
+    ts=$(kc get deploy $@ -o jsonpath="{.spec.template.metadata.annotations.reload_date}")
+    if [ -n "$ts" ]; then
+      echo reload_date: $ts
+      echo date at  
+      ruby -e "puts Time.at($ts)"
+    else
+      echo No reload_date
+    fi
+    ;;
+  domain|domains)
+    shift
+    kc_get_domains $@
+    ;; 
+  img)
+    shift
+    kc_deployment_img $@
+    ;;
+  exit|quit|reset)
+    kc env reset
+    ;;
+  all)
+    kc get all --all-namespaces -owide $@
+    ;;
+  *)
+    # namespace 可以追加 -n production 覆盖
+    kubectl --namespace=$(kc_current_ns) $@
+    ;;
+  esac
+}
+
+# pod上标识所属deployment的标识label
+export kc_dp_label_default=astarup.app.name
+export kc_dp_label=$kc_dp_label_default
+
+kc_default_ns(){
+  kubectl config view --minify | grep namespace | cut -f 2- -d ':' | tr -d ' '
+}
+
+kc_current_ns(){
+  echo ${kc_ns:-$(kc_default_ns)}
+}
+
+kc_current_context(){
+  kubectl config current-context
+}
+
+# context switch
+kcct(){
+  tp=$1 
+  case "$tp" in
+    l|local)
+      kc config use-context ${kc_local_context:-docker-for-desktop}
+      ;;
+    q8s|q)
+      kc config use-context qk8s
+      ;;
+    *)
+      #kc config current-context
+      kc config get-contexts
+      ;;
+  esac
+}
+
+# kcns production # 切换不同的namespace，仅对当前session有效
+kcns(){
+  ns=$1 
+  [ -z "$ns" ] || {
+    case "$ns" in
+      ls)
+        kc get ns
+        return
+        ;;
+      reset)
+        ns=$(kc_default_ns)
+        ;;
+      p|prod)
+        ns=production
+        ;;
+      s|st)
+        ns=staging
+        ;;
+      ops)
+        ns=devops
+        ;;
+      sys)
+        ns=kube-system
+        ;;
+    esac
+    export kc_ns=$ns
+
+    # set before any echo
+    if [ "$ns" = "staging" -o "$ns" = "default" ]; then
+      export PS1=$kc_origin_ps1
+    else # support close danger pompt hint by env-var
+      if [ -z "$KC_SKIP_DANGER_PROMPT" ]; then
+        if [ "$PS1" = "$kc_origin_ps1" ]; then # not set now
+          export PS1="\e[0;31mKC-$(kc_current_ns)!\e[m$PS1"
+        fi
+      fi
+    fi
+
+    [ "$ns" = "production" ] && kc_ns_alert
+  }
+  echo current namespace: $(kc_current_ns) in context: $(kc_current_context)
+  [ -n "$DEBUG" ] && echo pod dpeloyment label: $kc_dp_label
+}
+
+kc_ns_alert(){
+  echo "######################################"
+  echo "!!  WAKEUP, YOU ARE IN DANGER AREA !!"
+  echo $@
+}
+
+kcsh(){
+  [ $# -lt 1 ] && echo require pod or deployment name && return 1
+  kcns
+  po_name=$(kc_get_pod $1)
+  echo ==link to pod: $po_name
+  kc exec $po_name -it -- sh
+  #kubectl exec $pod -it -- $@
+}
+
+# 自定义列
+# get service -n kube-system -o=custom-columns="NAME:.metadata.name,IP:.spec.clusterIP,PORT:.spec.ports[*].targetPort"
+get_pod_name_by_label(){
+  kubectl get pod --output=custom-columns=Name:.metadata.name --no-headers $@
+}
+
+# phase is just part of pod status
+get_pod_phase(){
+  kubectl get pod --output=custom-columns=Name:.status.phase --no-headers $@ 2>/dev/null
+}
+
+# use this check pod status according 
+get_pod_status(){
+  kubectl get pod --no-headers $@ 2>/dev/null | awk '{ print $3; }'
+}
+
+# 快速查看image
+# $0 dklab-ping
+kc_deployment_img(){
+  kc get -o=jsonpath='{.spec.template.spec.containers[0].image}' deploy $@
+}
+alias kcimg=kc_deployment_img
+
+# deployment name format: postgresql-audit-postgresql
+# pod name format: optimus-sidekiq-slow-3025720494-pdwsx
+# jenkins-67cf45b496-jdgq7
+kc_get_pod(){
+  pname=$1
+  [[ "$pname" =~ .+-[0-9a-z]+-[^-]+ ]] || {
+    pname=$(kc_pod_from_deploy $pname)
+  }
+  echo $pname
+}
+
+kc_pod_from_deploy(){
+  dname=$1
+  shift
+  kc get po -l "${kc_dp_label}=${dname}" -o=jsonpath='{.items[0].metadata.name}' $@
+}
+
+kc_get_nodes(){
+  # kc get no -o wide
+  kc get no -o jsonpath='{range.items[*]}{@.metadata.name}{"\t"}{@.status.addresses[0].address}{"\n"}{end}' $@
+}
+
+kc_get_domains(){
+  kc get ingress --all-namespaces -o jsonpath='{range.items[*]}{"http://"}{@.spec.rules[0].host}{"\t"}{@.metadata.name}{"\t"}{@.metadata.namespace}{"\n"}{end}' $@ | column -t
+}
+
+alias kctl="kubectl"
+alias kcpo='kc po'
+alias kcdp='kc deploy'
+alias kclog='kc log'
+
+#############################
+#   daily usage cases
+
+## bb, bbox: busybox for try 
+bb_pod_name(){
+  get_pod_name_by_label --selector='tool=bbox'
+}
+
+kbox(){
+  st=$(get_pod_status --selector=tool=bbox)
+  if [ -z "$st" ];then
+    kboxstart
+    echo ==start a new pod
+    sleep 1
+  else
+    if [ "$st" != "Running" ];then
+      echo ==error: pod in $st
+      return 1
+    fi
+  fi
+  kubectl attach $(bb_pod_name) -c bb -it
+}
+
+kboxstart(){
+  kubectl run bb --image busybox --labels='tool=bbox' -t
+}
+
+kboxclear(){
+  kubectl delete deploy bb
+  echo ==clear busybox bb deployment
+}
+
+#k8s-dashboard WebUI
+# https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
+# runs kubectl in a mode where it acts as a reverse proxy. It handles locating the apiserver and authenticating.
+# better way!!! kubectl proxy --help
+# kubectl proxy --port=8001 &  # --port=0
+# visit at
+# http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/
+# 可以curl访问
+# curl http://localhost:8001/api/
+
+# 注意镜像在gcr.io上，需要翻墙
+kbuifileupdate(){
+  # kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+  url=https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+  cd /l/ops/dklab/kb/
+  curl -LO $url
+}
+
+kbui(){
+  st=$(get_pod_name_by_label -n kube-system -l k8s-app=kubernetes-dashboard)
+  [ -z "$st" ] && kbuistart
+
+  node_port=$(kubectl get svc -n kube-system -l role=k8s-dashboard-ui --no-headers -o jsonpath='{.items[0].spec.ports[0].nodePort}')
+  url=https://localhost:$node_port # https required
+  echo ==visit dashboard webui at $url 
+  open $url
+}
+
+dashboard_pod_name(){
+  get_pod_name_by_label --selector='k8s-app=kubernetes-dashboard' -n kube-system
+}
+
+kbuistart(){
+  echo ==creating dashboard deployment
+  kbuifile=/l/ops/dklab/kb/kubernetes-dashboard.yml 
+  kubectl create -f $kbuifile
+  echo ==expose a local service
+  kubectl expose deploy/kubernetes-dashboard --name kbui --port 18443 --target-port 8443 --type NodePort --protocol TCP -n kube-system --labels="role=k8s-dashboard-ui" #  --external-ip `hostip`
+  # or use port-forward
+  #kubectl port-forward kubernetes-dashboard-7798c48646-xgx44 8443:8443 -n kube-system
+}
+
+kbuiclear(){
+  kbuifile=/l/ops/dklab/kb/kubernetes-dashboard.yml 
+  kubectl delete -f $kbuifile 2>/dev/null
+  #kubectl delete -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml 2>/dev/null
+  # local service
+  kubectl delete svc -n kube-system -l role=k8s-dashboard-ui 2>/dev/null
+  echo ==cleaned kb dashboard ui
+}
+
+kbng(){
+  name=${1:-ng}
+  kubectl run $name --image nginx --port 80 # --expose
+  kubectl expose deployment $name --port 80 --type NodePort
+  # kubectl get svc ng1
+  node_port=$(kubectl get svc -l run=$name --no-headers -o jsonpath='{.items[0].spec.ports[0].nodePort}')
+  url=http://localhost:$node_port
+  echo ==visit url: $url
+}
+
+kbngclear(){
+  name=${1:-ng}
+  kubectl delete deploy,svc $name
+}
