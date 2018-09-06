@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+require_relative '../lib/docker_kit.rb'
+
+$dockerfile = <<~Desc
+  FROM ruby:2-alpine3.7
+  CMD ruby -e "todo"
+Desc
+
+class DockletCLI < DockletBase
+end
+
+DockletCLI.start

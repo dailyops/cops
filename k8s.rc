@@ -1,3 +1,9 @@
+#!/usr/bin/env bash 
+[ -z $BOOTER_KC_RC ] || { echo Warning: has sourced $BOOTER_KC_RC!; return 1; } 
+BOOTER_KC_RC=$(evar=${BASH_SOURCE[0]} ruby -e "puts File.realpath(ENV['evar'])")
+BOOTER_KC_HOME=$(dirname $BOOTER_KC_RC)
+[ -d "$BOOTER_KC_HOME/bin" ] && PATH=$PATH:$BOOTER_KC_HOME/bin
+
 ## k8s utils powered by kubectl
 
 # cluster contexts config as https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/
@@ -15,24 +21,37 @@ kc_set_config(){
 kc_set_config
 
 kc(){
-  tp=$1
+  tp=${1}
   case "$tp" in
-  h|help)
-    type $FUNCNAME
+  home|root)
+    echo $BOOTER_KC_HOME
+    ;;
+  cd)
+    cd "$BOOTER_KC_HOME"
     ;;
   rc|vi)
-    vi ${BASH_SOURCE[0]}
+    vi "$BOOTER_KC_RC"
+    ;;
+  show)
+    cat "$BOOTER_KC_RC"
+    ;;
+  help|h)
+    type $FUNCNAME 
     ;;
   conf)
     echo KUBECONFIG=$KUBECONFIG
     ;;
-  desc|event|trace)
+  desc)
+    shift
+    kc describe $@
+    ;;
+  event|trace)
     shift
     # 获取启动错误信息, event信息
     kc describe po $(kc_get_pod $@)
     #kubectl explain
     ;;
-  ns|env)
+  ns)
     shift
     kcns $@
     ;;
@@ -85,7 +104,7 @@ kc(){
     kc_deployment_img $@
     ;;
   exit|quit|reset)
-    kc env reset
+    kcns reset
     ;;
   all)
     kc get all --all-namespaces -owide $@
@@ -113,15 +132,20 @@ kc_current_context(){
   kubectl config current-context
 }
 
-# context switch
+# context env switch
 kcct(){
   tp=$1 
   case "$tp" in
-    l|local)
+    l|local|reset)
       kc config use-context ${kc_local_context:-docker-for-desktop}
       ;;
     q8s|q)
       kc config use-context qk8s
+      ;;
+    set)
+      shift
+      kubectl config set-context $(kubectl config current-context) $@
+      #kubectl config set-context $(kubectl config current-context) --namespace=staging
       ;;
     *)
       #kc config current-context
@@ -278,22 +302,16 @@ kboxclear(){
 #k8s-dashboard WebUI
 # https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
 # runs kubectl in a mode where it acts as a reverse proxy. It handles locating the apiserver and authenticating.
-# better way!!! kubectl proxy --help
-# kubectl proxy --port=8001 &  # --port=0
-# visit at
-# http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/
-# 可以curl访问
+# kubectl proxy --help
 # curl http://localhost:8001/api/
-
-# 注意镜像在gcr.io上，需要翻墙
-kbuifileupdate(){
-  # kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
-  url=https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
-  cd /l/ops/dklab/kb/
-  curl -LO $url
+kbui(){
+  nohup kubectl proxy --port=8001 > /tmp/k8s-proxy.log &  # --port=0
+  url=http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/
+  echo visit at $url
+  open $url
 }
 
-kbui(){
+kbui1(){
   st=$(get_pod_name_by_label -n kube-system -l k8s-app=kubernetes-dashboard)
   [ -z "$st" ] && kbuistart
 
@@ -301,6 +319,14 @@ kbui(){
   url=https://localhost:$node_port # https required
   echo ==visit dashboard webui at $url 
   open $url
+}
+
+# 注意镜像在gcr.io上，需要翻墙
+kbuifileupdate(){
+  # kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+  url=https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+  cd /l/ops/dklab/kb/
+  curl -LO $url
 }
 
 dashboard_pod_name(){

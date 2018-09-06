@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+require_relative '../lib/docker_kit.rb'
+
+$dockerfile = <<~Desc
+  FROM ubuntu:16.04
+  ENV DEBIAN_FRONTEND noninteractive
+  ENV LANGUAGE C.UTF-8
+  ENV LANG C.UTF-8
+  ENV LC_ALL C.UTF-8
+  ENV TZ Asia/Shanghai
+
+  #apt-get -y install language-pack-zh-hans && locale-gen zh_CN.UTF-8
+  RUN apt-get -y update && \
+    apt-get -y install tzdata && \
+    dpkg-reconfigure -f noninteractive tzdata && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+    apt-get -y install curl git net-tools dnsutils iputils-ping
+
+  CMD bash
+Desc
+
+class DockletCLI < DockletBase
+end
+
+DockletCLI.start

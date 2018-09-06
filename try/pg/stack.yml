@@ -1,0 +1,18 @@
+## on docker
+#docker-compose -f stack.yml up
+## on docker swarm
+#docker stack deploy -c stack.yml postgres
+
+# Use postgres/example user/password credentials
+version: '3.1'
+services:
+  db:
+    image: postgres:9.6.3
+    environment:
+      POSTGRES_PASSWORD: example
+    ports:
+      - 15432:5432
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080

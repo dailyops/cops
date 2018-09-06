@@ -1,19 +1,29 @@
-####################################
-#        Docker 
+# docker utils
 
-alias dkrc="vi /l/dailyops/kc/docker.rc"
-alias dk=docker
+dk(){
+  case "$1" in
+    rc)
+      vi ${BASH_SOURCE[0]}
+      ;;
+    *)
+      docker $@
+      ;;
+  esac
+}
+# docker --debug run ...
+
 alias dki='docker images -a'
 alias dkps="docker ps -a"
 alias dkpl='docker pull'
-alias dkref='open https://docs.docker.com/reference/'
-alias dklab='cd /l/ops/dot-docker/dklab'
+alias dku="docker run --rm -ti ubuntu bash"
+#/bin/bash -c "while true; do date; sleep 6; done"
+# moby
+alias busybox="docker run --rm -it busybox"
 
 dksearch(){
   name=${1:-ruby}
   open "https://store.docker.com/search?q=${name}&type=image&source=verified"
 }
-alias dks=dksearch
 
 dksyslog(){
   # on mac
@@ -26,9 +36,6 @@ function dkenv(){
   img=${1:-alpine}
   docker run --rm -it $img env
 }
-
-## commands
-# ps https://docs.docker.com/engine/reference/commandline/ps/
 
 # 容器网络ip
 function dkip(){
@@ -50,7 +57,7 @@ function dktry(){
 }
 
 function dksh(){
-  docker run --rm -ti ${1:-busybox} ${2:-sh}
+  docker run --rm -it ${1:-busybox} ${2:-sh}
 }
 
 function dkbash(){
@@ -67,15 +74,8 @@ function dkin(){
   fi
 }
 
-alias dku="docker run --rm -ti ubuntu bash"
-#/bin/bash -c "while true; do date; sleep 6; done"
-# moby
-alias busybox="docker run --rm -it busybox"
-
-
 ## Docker Compose
 alias dcom='docker-compose'
-alias dcomsample='vi /l/uboot/dkbox/docker-compose-sample.yml'
 
 # 容器清理
 # http://www.doublecloud.org/2015/05/simple-script-to-list-and-remove-all-stopped-docker-containers/
@@ -103,7 +103,7 @@ function dkrmi(){
 
 dkclean(){
   #docker system prune $* #-a
-  docker system prune
+  docker system prune -f
 }
 
 ## log message
@@ -168,7 +168,7 @@ function dklogfile(){
 }
 
 # 容器中文环境
-function dkzh(){
+function dkch(){
   docker exec -it ubuntu env LANG=C.UTF-8 /bin/bash
 }
 
@@ -225,20 +225,8 @@ function dkgcr(){
   docker pull gcr.io/google_containers/pause-amd64:3.0 # 194k
 }
 
-###################################
-#       k8s Kubernetes
-
-
-
-#############################
-#    just doc
-
-#kubectl config get-contexts
-#kubectl config use-context docker-for-desktop
-#kubectl config set-context $(kubectl config current-context) --namespace=<insert-namespace-name-here>
-
 # minikube start --help
-#alias mkb='minikube'
 
-# debug 模式run
-# docker --debug run ...
+## container access Mac host
+# docker.for.mac.host.internal
+

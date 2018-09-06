@@ -1,0 +1,14 @@
+#kubectl create -f ./hello-pod.yml
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-pod
+  labels:
+    app: hello-app
+spec:
+  containers:
+  - name: hello-container
+    image: busybox
+    command: ['sh', '-c', 'echo Hello Kubernetes! && sleep 3600']
+

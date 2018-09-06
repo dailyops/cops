@@ -1,0 +1,31 @@
+ apiVersion: v1  
+ kind: Service  
+ metadata:  
+   name: app1  
+   labels:  
+     name: app1  
+   namespace: default  
+ spec:  
+   type: NodePort  
+   ports:  
+   - port: 8080  
+     targetPort: 8080  
+     nodePort: 30062
+   selector:  
+     name: app1  
+
+...
+==port
+The port that the service is exposed on the service's cluster ip (virtual ip). Port is the service port which is accessed by others with cluster ip.
+
+==nodePort
+On top of having a cluster-internal IP, expose the service on a port on each node of the cluster (the same port on each node). You'll be able to contact the service on any<nodeIP>:nodePortaddress. So nodePort is alse the service port which can be accessed by the node ip by others with external ip.
+
+==targetPort, containerPort
+The port on the pod that the service should proxy traffic to.
+
+总的来说，port和nodePort都是service的端口，前者暴露给集群内客户访问服务，后者暴露给集群外客户访问服务。从这两个端口到来的数据都需要经过反向代理kube-proxy流入后端pod的targetPod，从而到达pod上的容器内
+
+kubectl run ng1 --image nginx --port 80 --env="DOMAIN=cluster"
+kubectl expose deployment ng1 --port 8081 --target-port 80 --external-ip <hostip> --type NodePort
+

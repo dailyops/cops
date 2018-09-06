@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ng-pod
+  labels:
+    app: ng
+spec:
+  containers:
+  - name: ng
+    image: nginx
+    ports:
+    - containerPort: 80
+
+...
+kubectl create -f ng-pod.yml

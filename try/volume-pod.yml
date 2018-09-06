@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: volume-pod
+spec:
+  containers:
+  - name: ng
+    image: nginx
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: app-logs
+      mountPath: /var/log/nginx
+  - name: bb
+    image: busybox
+    command: ["sh", "-c", "tail -f /logs/access*.log"]
+    volumeMounts:
+    - name: app-logs
+      mountPath: /logs
+  volumes:
+  - name: app-logs
+    emptyDir: {}
+...
+#kubectl logs volume-pod -c bb
+#kubectl exec -it volume-pod -c bb -- sh
+## wget -O- localhost
+#kubectl exec -it volume-pod -c ng -- ls /var/log/nginx
+#kubectl exec -it volume-pod -c ng -- tail -f /var/log/nginx/access.log
+#kubectl exec -it volume-pod -c bb -- tail -f /logs/access.log
