@@ -2,8 +2,6 @@ require 'byebug'
 require 'thor'
 require 'tempfile'
 
-class NoUserMainDefined < StandardError; end
-
 class DockletBase < Thor
   default_command :main
   class_option :debug, type: :boolean, default: false
@@ -13,15 +11,6 @@ class DockletBase < Thor
   option :clean, type: :boolean, default: false, banner: 'clean image'
   def main
     invoke :build, [], {} if options[:build]
-    begin
-      user_main
-    rescue NoUserMainDefined
-      puts "==no user_main defined" if options[:debug]
-      system <<~Script
-        docker run --rm --env name=test #{dock_image} env
-      Script
-    end
-    invoke :clean, [], {} if options[:clean]
   end
 
   desc 'runsh', 'docker run'
@@ -40,21 +29,18 @@ class DockletBase < Thor
 
   desc 'build', 'build image'
   def build
-    file = Tempfile.new('docklet')
-    begin
-      file.write $dockerfile
-      file.close # save to disk
-      system <<~Script
-        cat #{file.path} | docker build --tag #{dock_image} -
-      Script
-    ensure
-      file.unlink
-    end
+    system <<~Desc
+      cat #{tmp_dockerfile.path} | docker build --tag #{dock_image} -
+    Desc
   end
 
   desc 'clean', 'clean image'
   def clean
-    system "docker rmi #{dock_image}"
+    system <<~Desc
+      cids=$(docker ps -aq -f ancestor=#{dock_image})
+      [ -n "$cids" ] && docker rm --force --volumes "$cids"
+      docker rmi --force #{dock_image}
+    Desc
   end
 
   desc 'dockerfile', 'display dockerfile'
@@ -72,14 +58,33 @@ class DockletBase < Thor
     system "docker images #{dock_image}"
   end 
 
-  no_tasks do
+  no_commands do
     def dock_image
-      "docklet/#{File.basename($PROGRAM_NAME, '.rb')}"
+      "docklet/#{File.basename($PROGRAM_NAME, '.rb')}:current"
     end
 
-    def user_main
-      # redefine your logic in subclass
-      raise NoUserMainDefined.new
+    def script_path
+      File.dirname($PROGRAM_NAME)
     end
+
+    def tmp_dockerfile
+      @dfile ||= ::Util.tmpfile_for($dockerfile, prefix: 'docklet')
+    end
+
+    def invoke_clean
+      invoke :clean, [], {}
+    end
+  end
+end
+
+module Util
+  module_function
+
+  def tmpfile_for(str, prefix: 'kc-tmp')
+    file = Tempfile.new(prefix)
+    file.write str
+    file.close # save to disk
+    # unlink清理问题：引用进程结束时自动删除？👍 
+    file
   end
 end

@@ -9,7 +9,8 @@ $dockerfile = <<~Desc
 Desc
 
 class DockletCLI < DockletBase
-  def user_main
+  def main
+    super
     # 构建时指定的环境变量在运行时可以覆盖, 但已被引用的不会动态evaluate
     puts "==runtime env"
     system "docker run --rm #{dock_image}"

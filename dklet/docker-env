@@ -22,12 +22,13 @@ Desc
 
 class DockletCLI < DockletBase
 
-  def user_main
+  def main
+    super
     puts "==run with docker build args"
-    system <<~Script
+    system <<~Desc
       docker run --rm --env var_not_in_args=b1 #{dock_image}
       docker run --rm --env name=test #{dock_image} env
-    Script
+    Desc
   end
 
   def build

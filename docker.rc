@@ -98,7 +98,11 @@ function dkrmbyimg(){
 #remove unused docker resources(stopped containers, untagged and dangling images, unused images)
 #https://stackoverflow.com/questions/32723111/how-to-remove-old-and-unused-docker-images
 function dkrmi(){
-  docker rmi $(docker images -f "dangling=true" -q)
+  iids=$(docker images -f "dangling=true" -q)
+  if [ -n "$iids" ];then
+    docker rmi "$iids" 
+    echo ==removed images $iids
+  fi
 }
 
 dkclean(){
