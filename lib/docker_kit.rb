@@ -1,9 +1,10 @@
-require 'byebug'
 require 'bundler/inline'
 gemfile do
   source ENV['GEM_SOURCE'] || 'https://rubygems.org'
+  gem "byebug"
   gem "thor"
 end
+require 'byebug'
 require 'thor'
 require 'tempfile'
 require 'erb'
@@ -52,9 +53,42 @@ module DockDSL
   def dockerfile
     registry[:dockerfile]
   end
+
+  def task(name = :main, type: :after, &blk)
+    hook_name = "#{name}_#{type}_hooks".to_sym 
+    (registry[hook_name] ||= []) << blk
+  end
+
+  def before_task(name = :main, &blk)
+    task(name, type: :before, &blk)
+  end 
+
+  def start_cli!
+    DockletCLI.start
+  end
+
+  def extend_commands &blk
+    DockletCLI.class_eval &blk
+  end
+
+  def add_dsl &blk
+    DockDSL.module_eval &blk
+  end
 end
 
-class DockletBase < Thor
+module Util
+  module_function
+
+  def tmpfile_for(str, prefix: 'kc-tmp')
+    file = Tempfile.new(prefix)
+    file.write str
+    file.close # save to disk
+    # unlink清理问题：引用进程结束时自动删除？👍 
+    file.path
+  end
+end
+
+class DockletCLI < Thor
   default_command :main
   class_option :debug, type: :boolean, default: false
 
@@ -62,8 +96,10 @@ class DockletBase < Thor
   option :build, type: :boolean, default: true, banner: 'build image'
   option :clean, type: :boolean, default: false, banner: 'clean image'
   def main
+    invoke_hooks_for(:main, type: :before)
     invoke :build, [], {} if options[:build]
-    #puts "extend your logic by override with super"
+    invoke_hooks_for(:main)
+    invoke :clean, [], {} if options[:clean]
   end
 
   desc 'runsh', 'docker run'
@@ -95,18 +131,29 @@ class DockletBase < Thor
     Desc
   end
 
+  desc 'log', 'log container todo'
+  def log
+    puts <<~Desc
+      docker logs -t -f --details containerxxx 
+    Desc
+  end
+
   desc 'clean', 'clean image'
   def clean
+    invoke_hooks_for(:clean, type: :before)
     system <<~Desc
       cids=$(docker ps -aq -f ancestor=#{docker_image})
       [ -n "$cids" ] && docker rm --force --volumes "$cids"
       docker rmi --force #{docker_image}
     Desc
+    invoke_hooks_for(:clean)
   end
 
   desc 'spec', 'display dockerfile spec'
   def spec
+    puts "## dockerfile spec"
     puts File.read(dockerfile)
+    invoke_hooks_for(:spec)
   end
 
   desc 'image_name', 'display image name'
@@ -125,18 +172,17 @@ class DockletBase < Thor
     def invoke_clean
       invoke :clean, [], {}
     end
-  end
-end
 
-module Util
-  module_function
-
-  def tmpfile_for(str, prefix: 'kc-tmp')
-    file = Tempfile.new(prefix)
-    file.write str
-    file.close # save to disk
-    # unlink清理问题：引用进程结束时自动删除？👍 
-    file.path
+    def invoke_hooks_for(name = :main, type: :after)
+      hook_name = "#{name}_#{type}_hooks".to_sym
+      hooks = registry[hook_name]
+      if hooks && !hooks.empty?
+        hooks.each do |hook|
+          # eval by receiver dierectly
+          instance_eval &hook if hook.respond_to?(:call)
+        end
+      end
+    end
   end
 end
 

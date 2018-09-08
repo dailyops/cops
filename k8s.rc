@@ -366,3 +366,11 @@ kbngclear(){
   name=${1:-ng}
   kubectl delete deploy,svc $name
 }
+
+return 0
+
+## tips
+#copy remote file locally
+kubectl cp pod:/remote-file /local/file
+#verbose kubectl
+kubectl  --v=8 version
