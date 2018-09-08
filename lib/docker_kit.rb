@@ -17,7 +17,7 @@ module DockDSL
     DockDSL.registry
   end
 
-  def dock_image
+  def docker_image
     "docklet/#{File.basename($PROGRAM_NAME, '.rb')}:newest"
   end
 
@@ -70,7 +70,7 @@ class DockletBase < Thor
   option :cmd, banner: 'run command', default: 'sh'
   def runsh
     invoke :build, [], {}
-    system "docker run --rm -it #{dock_image} #{options[:cmd]}"
+    system "docker run --rm -it #{docker_image} #{options[:cmd]}"
   end
 
   desc 'console', 'get ruby console'
@@ -79,33 +79,28 @@ class DockletBase < Thor
     puts 'finish' if options[:debug]
   end
 
-  desc 'hi', ''
-  def hi
-    puts 'just say hi'
-  end
-
   desc 'daemon', 'docker run in daemon'
   option :opt, banner: 'run extra options'
   def daemon
     invoke :build, [], {}
-    system "docker run --detach #{options[:opt]} #{dock_image}"
+    system "docker run --detach #{options[:opt]} #{docker_image}"
   end
 
   desc 'build', 'build image'
   def build
-    #system "docker build --file xxx --tag #{dock_image} ."
+    #system "docker build --file xxx --tag #{docker_image} ."
     #donot need build context
     system <<~Desc
-      cat #{dockerfile} | docker build --tag #{dock_image} -
+      cat #{dockerfile} | docker build --tag #{docker_image} -
     Desc
   end
 
   desc 'clean', 'clean image'
   def clean
     system <<~Desc
-      cids=$(docker ps -aq -f ancestor=#{dock_image})
+      cids=$(docker ps -aq -f ancestor=#{docker_image})
       [ -n "$cids" ] && docker rm --force --volumes "$cids"
-      docker rmi --force #{dock_image}
+      docker rmi --force #{docker_image}
     Desc
   end
 
@@ -116,12 +111,12 @@ class DockletBase < Thor
 
   desc 'image_name', 'display image name'
   def image_name
-    puts dock_image
+    puts docker_image
   end
 
   desc 'image', 'list related image'
   def image
-    system "docker images #{dock_image}"
+    system "docker images #{docker_image}"
   end 
 
   no_commands do

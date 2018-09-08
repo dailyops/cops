@@ -22,7 +22,7 @@ set_file_for :jobspec, <<~Desc
       spec:
         containers:
         - name: hijob
-          image: <%=dock_image%>
+          image: <%=docker_image%>
         restartPolicy: Never
 Desc
 
@@ -45,7 +45,7 @@ class DockletCLI < DockletBase
 
   def build
     system <<~Desc
-      docker build --tag #{dock_image} --file #{dockerfile} #{script_path}
+      docker build --tag #{docker_image} --file #{dockerfile} #{script_path}
     Desc
   end
 

@@ -25,8 +25,8 @@ class DockletCLI < DockletBase
     super
     puts "==run with docker build args"
     system <<~Desc
-      docker run --rm --env var_not_in_args=b1 #{dock_image}
-      docker run --rm --env name=test #{dock_image} env
+      docker run --rm --env var_not_in_args=b1 #{docker_image}
+      docker run --rm --env name=test #{docker_image} env
     Desc
   end
 
@@ -35,7 +35,7 @@ class DockletCLI < DockletBase
       export var_in_args='a1'
       export var_missing='c1'
       export http_proxy='http_proxy1'
-      cat #{dockerfile} | docker build --force-rm --rm --build-arg var_in_args=a0 --build-arg http_proxy --tag #{dock_image} -
+      cat #{dockerfile} | docker build --force-rm --rm --build-arg var_in_args=a0 --build-arg http_proxy --tag #{docker_image} -
     Desc
   end
 end

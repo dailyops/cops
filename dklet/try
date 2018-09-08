@@ -14,11 +14,11 @@ class DockletCLI < DockletBase
     super
     system <<~Desc
       echo ==runtime env
-      docker run --rm #{dock_image}
+      docker run --rm #{docker_image}
       echo ==runtime env with host env set
-      env name=test docker run --rm #{dock_image}
+      env name=test docker run --rm #{docker_image}
       echo ==runtime env with docker env set
-      docker run --rm --env name=test #{dock_image}
+      docker run --rm --env name=test #{docker_image}
     Desc
   end
 end
