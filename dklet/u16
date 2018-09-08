@@ -19,7 +19,4 @@ set_dockerfile <<~Desc
   CMD bash
 Desc
 
-class DockletCLI < DockletBase
-end
-
-DockletCLI.start
+start_cli!

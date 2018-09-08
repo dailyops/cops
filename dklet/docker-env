@@ -20,16 +20,15 @@ set_dockerfile <<~Desc
         path=$PATH'
 Desc
 
-class DockletCLI < DockletBase
-  def main
-    super
-    puts "==run with docker build args"
-    system <<~Desc
-      docker run --rm --env var_not_in_args=b1 #{docker_image}
-      docker run --rm --env name=test #{docker_image} env
-    Desc
-  end
+task do
+  system <<~Desc
+    echo "==run with docker build args"
+    docker run --rm --env var_not_in_args=b1 #{docker_image}
+    docker run --rm --env name=test #{docker_image} env
+  Desc
+end
 
+extend_commands do
   def build
     system <<~Desc
       export var_in_args='a1'
@@ -40,4 +39,4 @@ class DockletCLI < DockletBase
   end
 end
 
-DockletCLI.start
+start_cli!

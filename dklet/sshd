@@ -21,7 +21,4 @@ set_dockerfile <<~Desc
   CMD ["/usr/sbin/sshd", "-D"]
 Desc
 
-class DockletCLI < DockletBase
-end
-
-DockletCLI.start
+start_cli!
