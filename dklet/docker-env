@@ -2,8 +2,8 @@
 require_relative '../lib/docker_kit.rb'
 
 # https://docs.docker.com/engine/reference/builder/#arg
-# http_proxy可以不指定ARG http_proxy指令，但要指定--build-arg 和外部环境变量, 内置支持，参见官方文档
-$dockerfile = <<~Desc
+# http_proxy可以不指定ARG http_proxy指令，但要指定--build-arg http_proxy, 内置支持，参见官方文档
+set_dockerfile <<~Desc
   FROM alpine
   ARG var_in_args
   #ARG var_not_in_args
@@ -21,7 +21,6 @@ $dockerfile = <<~Desc
 Desc
 
 class DockletCLI < DockletBase
-
   def main
     super
     puts "==run with docker build args"
@@ -32,21 +31,12 @@ class DockletCLI < DockletBase
   end
 
   def build
-    file = Tempfile.new('docklet')
-    begin
-      file.write $dockerfile
-      file.close # save to disk
-      #system "docker build --file #{file.path} --tag #{dock_image} ."
-      #donot need build context
-      system <<~Script
-        export var_in_args='a1'
-        export var_missing='c1'
-        export http_proxy='http_proxy1'
-        cat #{file.path} | docker build --force-rm --rm --build-arg var_in_args=a0 --build-arg http_proxy --tag #{dock_image} -
-      Script
-    ensure
-      file.unlink
-    end
+    system <<~Desc
+      export var_in_args='a1'
+      export var_missing='c1'
+      export http_proxy='http_proxy1'
+      cat #{dockerfile} | docker build --force-rm --rm --build-arg var_in_args=a0 --build-arg http_proxy --tag #{dock_image} -
+    Desc
   end
 end
 

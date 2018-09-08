@@ -1,31 +1,40 @@
 #!/usr/bin/env ruby
 require_relative '../lib/docker_kit.rb'
 
-$dockerfile = <<~Desc
+set_dockerfile <<~Desc
   FROM ruby:2-alpine3.7
   WORKDIR /app
   COPY try.rb /app
   CMD /app/try.rb
 Desc
 
+set_file_for :jobspec, <<~Desc
+  apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: hijob
+  spec:
+    # retry times before fail
+    backoffLimit: 3
+    # wait job running time in seconds
+    activeDeadlineSeconds: 600
+    template:
+      spec:
+        containers:
+        - name: hijob
+          image: <%=dock_image%>
+        restartPolicy: Never
+Desc
+
 class DockletCLI < DockletBase
   def main
+    invoke_clean
     super
-
-    jobfile = ::Util.tmpfile_for(job_body)
     system <<~Desc
-      cat #{jobfile.path} | kubectl create -f -
+      kubectl create -f #{jobfile} 
+      sleep 3
+      kubectl logs job/hijob
     Desc
-
-    invoke_clean if options[:clean]
-  end
-
-  desc 'retry', ''
-  def retry
-    invoke :clean
-    invoke :main
-    sleep 3
-    system 'kubectl logs job/hijob'
   end
 
   desc 'clean', ''
@@ -34,37 +43,20 @@ class DockletCLI < DockletBase
     super
   end
 
-  desc 'manifest', ''
-  def manifest
-    puts job_body
-  end
-
   def build
     system <<~Desc
-      docker build --tag #{dock_image} --file #{tmp_dockerfile.path} #{script_path}
+      docker build --tag #{dock_image} --file #{dockerfile} #{script_path}
     Desc
   end
 
-  no_tasks do
-    def job_body
-      <<~Desc
-        ---
-        apiVersion: batch/v1
-        kind: Job
-        metadata:
-          name: hijob
-        spec:
-          template:
-            spec:
-              containers:
-              - name: hijob
-                image: #{dock_image}
-              restartPolicy: Never
-          # retry times before fail
-          backoffLimit: 3
-          # wait job running time in seconds
-          activeDeadlineSeconds: 600
-      Desc
+  desc 'jobspec', ''
+  def jobspec
+    puts File.read(jobfile)
+  end
+
+  no_commands do
+    def jobfile
+      @_jobfile ||= rendered_file_for(:jobspec)
     end
   end
 end

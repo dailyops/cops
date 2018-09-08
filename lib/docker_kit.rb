@@ -1,6 +1,58 @@
 require 'byebug'
+require 'bundler/inline'
+gemfile do
+  source ENV['GEM_SOURCE'] || 'https://rubygems.org'
+  gem "thor"
+end
 require 'thor'
 require 'tempfile'
+require 'erb'
+
+module DockDSL
+  def self.registry
+    @_registry ||= {}
+  end
+
+  def registry
+    DockDSL.registry
+  end
+
+  def dock_image
+    "docklet/#{File.basename($PROGRAM_NAME, '.rb')}:newest"
+  end
+
+  # 触发脚本所在目录
+  def script_path
+    File.dirname($PROGRAM_NAME)
+  end
+  
+  def set_file_for(name, str)
+    registry[name] = ::Util.tmpfile_for(str)
+  end
+
+  def file_for(name)
+    registry[name]
+  end
+
+  def file_content_for(name)
+    File.read(registry[name])
+  end
+
+  def rendered_file_for(name, locals: {}, in_binding: binding)
+    tmpl = file_content_for(name)
+    erb = ERB.new(tmpl, nil, '%<>')
+    rendered = erb.result(in_binding)
+    ::Util.tmpfile_for(rendered)
+  end
+
+  def set_dockerfile(str)
+    set_file_for(:dockerfile, str)
+  end
+
+  def dockerfile
+    registry[:dockerfile]
+  end
+end
 
 class DockletBase < Thor
   default_command :main
@@ -11,6 +63,7 @@ class DockletBase < Thor
   option :clean, type: :boolean, default: false, banner: 'clean image'
   def main
     invoke :build, [], {} if options[:build]
+    #puts "extend your logic by override with super"
   end
 
   desc 'runsh', 'docker run'
@@ -18,6 +71,17 @@ class DockletBase < Thor
   def runsh
     invoke :build, [], {}
     system "docker run --rm -it #{dock_image} #{options[:cmd]}"
+  end
+
+  desc 'console', 'get ruby console'
+  def console
+    byebug
+    puts 'finish' if options[:debug]
+  end
+
+  desc 'hi', ''
+  def hi
+    puts 'just say hi'
   end
 
   desc 'daemon', 'docker run in daemon'
@@ -29,8 +93,10 @@ class DockletBase < Thor
 
   desc 'build', 'build image'
   def build
+    #system "docker build --file xxx --tag #{dock_image} ."
+    #donot need build context
     system <<~Desc
-      cat #{tmp_dockerfile.path} | docker build --tag #{dock_image} -
+      cat #{dockerfile} | docker build --tag #{dock_image} -
     Desc
   end
 
@@ -43,9 +109,9 @@ class DockletBase < Thor
     Desc
   end
 
-  desc 'dockerfile', 'display dockerfile'
-  def dockerfile
-    puts $dockerfile
+  desc 'spec', 'display dockerfile spec'
+  def spec
+    puts File.read(dockerfile)
   end
 
   desc 'image_name', 'display image name'
@@ -59,17 +125,7 @@ class DockletBase < Thor
   end 
 
   no_commands do
-    def dock_image
-      "docklet/#{File.basename($PROGRAM_NAME, '.rb')}:current"
-    end
-
-    def script_path
-      File.dirname($PROGRAM_NAME)
-    end
-
-    def tmp_dockerfile
-      @dfile ||= ::Util.tmpfile_for($dockerfile, prefix: 'docklet')
-    end
+    include DockDSL
 
     def invoke_clean
       invoke :clean, [], {}
@@ -85,6 +141,8 @@ module Util
     file.write str
     file.close # save to disk
     # unlink清理问题：引用进程结束时自动删除？👍 
-    file
+    file.path
   end
 end
+
+extend DockDSL
