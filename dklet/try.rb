@@ -1,5 +1,4 @@
-#!/usr/bin/env ruby
-require_relative '../lib/docker_kit.rb'
+#!/usr/bin/env dkrunlet
 
 set_dockerfile <<~Desc
   FROM alpine

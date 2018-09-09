@@ -1,5 +1,4 @@
-#!/usr/bin/env ruby
-require_relative '../lib/docker_kit.rb'
+#!/usr/bin/env dkrunlet
 
 # https://docs.docker.com/engine/reference/builder/#arg
 # http_proxy可以不指定ARG http_proxy指令，但要指定--build-arg http_proxy, 内置支持，参见官方文档

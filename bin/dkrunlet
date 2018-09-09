@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+require_relative '../lib/docker_kit'
+
+file = ARGV[0]
+$PROGRAM_NAME = file
+ARGV.shift
+load file
+
+__END__
+
+# way2
+require 'thor'
+class DkletRunner < Thor
+  desc 'runlet FILE', ''
+  def runlet(file, *_)
+    $PROGRAM_NAME = file
+    ARGV.shift(2)
+    load file
+  end
+end
+DkletRunner.start
