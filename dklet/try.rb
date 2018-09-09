@@ -1,4 +1,4 @@
-#!/usr/bin/env dkrunlet
+#!/usr/bin/env rundklet
 
 set_dockerfile <<~Desc
   FROM alpine
