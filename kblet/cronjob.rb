@@ -2,7 +2,7 @@
 
 set_dockerfile <<~Desc
   # ref https://docs.docker.com/engine/reference/builder/#usage
-  FROM alpine:3.7
+  FROM busybox:1.29
   LABEL maintainer=dailyops
   CMD sh
 Desc
@@ -31,7 +31,7 @@ set_file_for :jobspec, <<~Desc
           spec:
             containers:
             - name: hello
-              image: busybox:1.29
+              image: #{docker_image}
               args:
               - /bin/sh
               - -c
@@ -39,10 +39,15 @@ set_file_for :jobspec, <<~Desc
             restartPolicy: OnFailure
 Desc
 
-task :main do
+before_task :main do
   invoke_clean
+end
+
+task :main do
   system <<~Desc
     kubectl create -f #{file_for(:jobspec)}
+    # watch output
+    #watch -n 30 kubectl logs -l tracing=hello-job-pod
   Desc
 end
 
