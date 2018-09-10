@@ -19,7 +19,7 @@ set_dockerfile <<~Desc
         path=$PATH'
 Desc
 
-task do
+task :main do
   system <<~Desc
     echo "==run with docker build args"
     docker run --rm --env var_not_in_args=b1 #{docker_image}
@@ -38,4 +38,4 @@ extend_commands do
   end
 end
 
-start_cli!
+let_cli_magic_start!

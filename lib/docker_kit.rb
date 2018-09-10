@@ -63,7 +63,7 @@ module DockDSL
     task(name, type: :before, &blk)
   end 
 
-  def start_cli!
+  def let_cli_magic_start!
     DockletCLI.start
   end
 
@@ -73,6 +73,14 @@ module DockDSL
 
   def add_dsl &blk
     DockDSL.module_eval &blk
+  end
+
+  def add_note str
+    (registry[:user_notes] ||= []) << str
+  end
+
+  def user_notes
+    registry[:user_notes]
   end
 end
 
@@ -102,7 +110,7 @@ class DockletCLI < Thor
     invoke :clean, [], {} if options[:clean]
   end
 
-  desc 'runsh', 'docker run'
+  desc 'runsh', 'docker run eg. interactive sh'
   option :cmd, banner: 'run command', default: 'sh'
   def runsh
     invoke :build, [], {}
@@ -138,6 +146,11 @@ class DockletCLI < Thor
     Desc
   end
 
+  desc 'note', 'display user notes'
+  def note
+    puts user_notes.join("\n")
+  end
+
   desc 'clean', 'clean image'
   def clean
     invoke_hooks_for(:clean, type: :before)
@@ -149,9 +162,9 @@ class DockletCLI < Thor
     invoke_hooks_for(:clean)
   end
 
-  desc 'spec', 'display dockerfile spec'
+  desc 'spec', 'display spec eg. Dockerfile'
   def spec
-    puts "## dockerfile spec"
+    puts "## Dockerfile spec"
     puts File.read(dockerfile)
     invoke_hooks_for(:spec)
   end

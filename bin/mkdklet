@@ -25,7 +25,11 @@ set_dockerfile <<~Desc
 Desc
 
 task :main do
-  puts "add your logic here with image: #{docker_image}"
+  #puts "add your logic here with image: #{docker_image}"
 end
 
-start_cli!
+add_note <<~Note
+  make a quick note here?
+Note
+
+let_cli_magic_start!

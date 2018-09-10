@@ -1,5 +1,7 @@
 # Container & Docker & K8s(Kubernetes) World
 
+## dk for docker wraper
+
 ## kc for kubectl wrapper
 
-## dk for docker wraper
+## make rails dockerize

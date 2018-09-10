@@ -18,4 +18,4 @@ set_dockerfile <<~Desc
   CMD bash
 Desc
 
-start_cli!
+let_cli_magic_start!

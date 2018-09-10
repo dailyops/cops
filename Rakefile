@@ -1,12 +1,13 @@
 namespace :dklet do
   task :hi do
+    hipath = 'tmp/hidklet'
     result = system <<~Desc
-      mkdir -p tmp
-      rm -f tmp/hidklet
-      mkdklet tmp/hidklet
-      tmp/hidklet help
-      tmp/hidklet
-      tmp/hidklet clean
+      mkdir -p #{File.dirname(hipath)}
+      rm -f #{hipath}
+      mkdklet #{hipath}
+      #{hipath} help
+      #{hipath} # main
+      #{hipath} clean
     Desc
 
     if result

@@ -7,7 +7,7 @@ set_dockerfile <<~Desc
   CMD sh -c 'echo name=$name name1=$name1'
 Desc
 
-task do
+task :main do
   # 构建时指定环境变量在运行时可覆盖, 但已被引用的不会动态计算
   system <<~Desc
     echo ==runtime env
@@ -19,4 +19,4 @@ task do
   Desc
 end
 
-start_cli!
+let_cli_magic_start!

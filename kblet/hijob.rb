@@ -1,4 +1,5 @@
 #!/usr/bin/env rundklet
+# see https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
 
 set_dockerfile <<~Desc
   FROM ruby:2-alpine3.7
@@ -29,11 +30,11 @@ set_file_for :jobspec, <<~Desc
         restartPolicy: Never
 Desc
 
-before_task do
+before_task :main do
   invoke_clean
 end
 
-task do
+task :main do
   system <<~Desc
     kubectl create -f #{jobfile} 
     sleep 3
@@ -68,4 +69,8 @@ extend_commands do
   end
 end
 
-start_cli!
+add_note <<~Note
+  * https://v1-10.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#job-v1-batch
+Note
+
+let_cli_magic_start!

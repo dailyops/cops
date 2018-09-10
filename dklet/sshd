@@ -21,4 +21,4 @@ set_dockerfile <<~Desc
   CMD ["/usr/sbin/sshd", "-D"]
 Desc
 
-start_cli!
+let_cli_magic_start!

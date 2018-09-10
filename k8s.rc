@@ -374,3 +374,4 @@ return 0
 kubectl cp pod:/remote-file /local/file
 #verbose kubectl
 kubectl  --v=8 version
+
