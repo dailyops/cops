@@ -21,7 +21,6 @@ set_file_for :k8spec, <<~Desc
       - containerPort: 80
 Desc
 
-
 before_task :main do
   invoke_clean
 end

@@ -19,6 +19,7 @@ module DockDSL
   end
 
   def docker_image
+    # NOTE: avoid use latest tag
     "docklet/#{File.basename($PROGRAM_NAME, '.rb')}:newest"
   end
 
@@ -55,8 +56,8 @@ module DockDSL
   end
 
   def task(name = :main, type: :after, &blk)
-    hook_name = "#{name}_#{type}_hooks".to_sym 
-    (registry[hook_name] ||= []) << blk
+    hooks_name = "#{name}_#{type}_hooks".to_sym 
+    (registry[hooks_name] ||= []) << blk
   end
 
   def before_task(name = :main, &blk)
@@ -187,8 +188,8 @@ class DockletCLI < Thor
     end
 
     def invoke_hooks_for(name = :main, type: :after)
-      hook_name = "#{name}_#{type}_hooks".to_sym
-      hooks = registry[hook_name]
+      hooks_name = "#{name}_#{type}_hooks".to_sym
+      hooks = registry[hooks_name]
       if hooks && !hooks.empty?
         hooks.each do |hook|
           # eval by receiver dierectly
