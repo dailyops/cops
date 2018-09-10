@@ -21,8 +21,12 @@ set_file_for :k8spec, <<~Desc
       - containerPort: 80
 Desc
 
-task :main do
+
+before_task :main do
   invoke_clean
+end
+
+task :main do
   system <<~Desc
     kubectl create -f #{file_for(:k8spec)}
     kubectl get pod ng --show-labels
