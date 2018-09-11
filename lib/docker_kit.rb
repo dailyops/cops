@@ -47,12 +47,17 @@ module DockDSL
     ::Util.tmpfile_for(rendered)
   end
 
-  def set_dockerfile(str)
-    set_file_for(:dockerfile, str)
+  def set_dockerfile(str, name: nil)
+    set_file_for(norm_dockerfile(name), str)
   end
 
-  def dockerfile
-    registry[:dockerfile]
+  def dockerfile(name=nil)
+    registry[norm_dockerfile(name)]
+  end
+
+  def norm_dockerfile(name = nil)
+    return :dockerfile unless name
+    "dockerfile_for_#{name}".to_sym
   end
 
   def task(name = :main, type: :after, &blk)

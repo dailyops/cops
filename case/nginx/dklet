@@ -1,0 +1,28 @@
+#!/usr/bin/env rundklet
+
+set_dockerfile <<~Desc
+  # ref https://docs.docker.com/engine/reference/builder/#usage
+  FROM nginx:1.15-alpine
+  LABEL maintainer=dailyops
+  #CMD sh
+Desc
+
+before_task do
+  invoke_clean
+end
+
+task :main do
+  #puts "add your logic here with image: #{docker_image}"
+  system <<~Desc
+    docker run --name docklet-ng -d -p 28384:80 #{docker_image}   
+    curl http://localhost:28384
+    docker logs -t --details docklet-ng
+    echo http://localhost:28384
+  Desc
+end
+
+add_note <<~Note
+  make quick note here
+Note
+
+let_cli_magic_start!

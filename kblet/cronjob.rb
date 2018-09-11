@@ -46,8 +46,6 @@ end
 task :main do
   system <<~Desc
     kubectl create -f #{file_for(:jobspec)}
-    # watch output
-    #watch -n 30 kubectl logs -l tracing=hello-job-pod
   Desc
 end
 
@@ -64,6 +62,10 @@ extend_commands do
         kubectl get pods --watch
     Desc
     system "kubectl get jobs --watch"
+  end
+  
+  def log
+    system "watch -n 30 kubectl logs -l tracing=hello-job-pod"
   end
 end
 

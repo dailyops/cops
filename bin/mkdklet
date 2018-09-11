@@ -29,7 +29,7 @@ task :main do
 end
 
 add_note <<~Note
-  make quick note here?
+  make quick note here
 Note
 
 let_cli_magic_start!
