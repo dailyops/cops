@@ -1,6 +1,6 @@
 #!/usr/bin/env rundklet
 
-set_dockerfile <<~Desc
+write_dockerfile <<~Desc
   FROM ubuntu:16.04
   ENV DEBIAN_FRONTEND noninteractive
   ENV LANGUAGE C.UTF-8

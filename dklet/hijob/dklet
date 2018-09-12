@@ -1,14 +1,13 @@
 #!/usr/bin/env rundklet
-# see https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
-set_dockerfile <<~Desc
+
+write_dockerfile <<~Desc
   FROM ruby:2-alpine3.7
   WORKDIR /app
   COPY try.rb /app
   CMD /app/try.rb
 Desc
 
-set_specfile <<~Desc
-  ---
+write_specfile <<~Desc
   apiVersion: batch/v1
   kind: Job
   metadata:
@@ -21,15 +20,15 @@ set_specfile <<~Desc
     # concurrency
     #parallelism: 2
     # retry times before job fail
-    backoffLimit: 3
+    #backoffLimit: 2
     # wait job running time in seconds
-    activeDeadlineSeconds: 10
+    #activeDeadlineSeconds: 10
     template:
       spec:
         containers:
         - name: hijob
           image: <%=docker_image%>
-          command: bash -c 'exit 1'
+          #command: ["bash", "-c", "exit", "1"]
         restartPolicy: Never
 Desc
 
@@ -49,7 +48,9 @@ before_task :clean do
 end
 
 add_note <<~Note
-  * https://v1-10.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#job-v1-batch
+  * https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
+  * backoffLimit bug in 1.10.3
+  https://github.com/kubernetes/kubernetes/issues/54870
 Note
 
 let_cli_magic_start!

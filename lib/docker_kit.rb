@@ -70,7 +70,7 @@ module DockDSL
   end
 
   # Dockerfile for image build
-  def set_dockerfile(str, name: nil)
+  def write_dockerfile(str, name: nil)
     set_file_for(norm_dockerfile_key(name), str)
   end
 
@@ -84,7 +84,7 @@ module DockDSL
   end
 
   # specfile for k8s resources spec manifest
-  def set_specfile(str, name: nil)
+  def write_specfile(str, name: nil)
     set_file_for(norm_specfile_key(name), str)
   end
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env rundklet
 
 # ref https://docs.docker.com/engine/reference/builder/#usage
-set_dockerfile <<~Desc
+write_dockerfile <<~Desc
   FROM alpine:3.7
   LABEL maintainer=dailyops
   COPY entrypoint.sh /entrypoint.sh

@@ -1,6 +1,6 @@
 #!/usr/bin/env rundklet
 
-set_dockerfile <<~Desc
+write_dockerfile <<~Desc
   # ref https://docs.docker.com/engine/reference/builder/#usage
   FROM nginx:1.15-alpine
   LABEL maintainer=dailyops

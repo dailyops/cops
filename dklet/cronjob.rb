@@ -1,14 +1,14 @@
 #!/usr/bin/env rundklet
 
-# ref https://docs.docker.com/engine/reference/builder/#usage
-set_dockerfile <<~Desc
+# https://docs.docker.com/engine/reference/builder/#usage
+write_dockerfile <<~Desc
   FROM busybox:1.29
   LABEL maintainer=dailyops
   CMD sh
 Desc
 
 #kubectl run hello --schedule="*/1 * * * *" --restart=OnFailure --image=busybox -- /bin/sh -c "date; echo Hello from the Kubernetes cluster"
-set_specfile <<~Desc
+write_specfile <<~Desc
   ---
   apiVersion: batch/v1beta1
   kind: CronJob

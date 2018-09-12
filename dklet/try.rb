@@ -1,6 +1,6 @@
 #!/usr/bin/env rundklet
 
-set_dockerfile <<~Desc
+write_dockerfile <<~Desc
   FROM alpine
   ENV name=geek
   ENV name1=${name}-1

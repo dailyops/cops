@@ -2,7 +2,7 @@
 
 # https://docs.docker.com/engine/reference/builder/#arg
 # http_proxy可以不指定ARG http_proxy指令，但要指定--build-arg http_proxy, 内置支持，参见官方文档
-set_dockerfile <<~Desc
+write_dockerfile <<~Desc
   FROM alpine
   ARG var_in_args
   #ARG var_not_in_args

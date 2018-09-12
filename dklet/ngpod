@@ -1,12 +1,12 @@
 #!/usr/bin/env rundklet
 
 # ref https://docs.docker.com/engine/reference/builder/#usage
-set_dockerfile <<~Desc
+write_dockerfile <<~Desc
   FROM nginx:1.15-alpine
   LABEL maintainer=dailyops
 Desc
 
-set_specfile <<~Desc
+write_specfile <<~Desc
   ---
   apiVersion: v1
   kind: Pod
