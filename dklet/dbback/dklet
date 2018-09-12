@@ -5,7 +5,8 @@ set_dockerfile <<~Desc
   FROM alpine:3.7
   LABEL maintainer=dailyops
   COPY backup-db.sh /backup-db.sh
-  ENTRYPOINT /backup-db.sh
+  ENTRYPOINT ["/backup-db.sh"]
+  # as volume
   WORKDIR /dbs
   CMD sh
 Desc
@@ -26,6 +27,7 @@ end
 
 add_note <<~Note
   demo db backup
+  https://medium.freecodecamp.org/docker-entrypoint-cmd-dockerfile-best-practices-abc591c30e21
 Note
 
 let_cli_magic_start! # make dockerize fun with ruby 
