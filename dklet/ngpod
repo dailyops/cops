@@ -13,7 +13,7 @@ set_specfile <<~Desc
   metadata:
     name: ng
     labels:
-      env: development
+      from: dklet-kc-dailyops
   spec:
     containers:
     - name: nginx
@@ -31,6 +31,7 @@ end
 
 before_task :clean do
   system "kubectl delete pod/ng"
+  sleep 3 # wait for pod terminating
 end
 
 add_note <<~Note
