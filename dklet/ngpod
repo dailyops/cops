@@ -40,7 +40,7 @@ add_note <<~Note
   kubectl get pods --show-labels
   kubectl get pods --selector owner=michael
   kubectl get pods -l 'env in (production, development)'
-  kubectl create -f ng-pod.yml
+  kubectl create -f ngpod.yml
 Note
 
 let_cli_magic_start!

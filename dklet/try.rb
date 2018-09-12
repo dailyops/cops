@@ -19,4 +19,11 @@ task :main do
   Desc
 end
 
+add_note <<~Note
+  # get image entrypoint
+  docker inspect <img-id> | grep Entrypoint
+  docker inspect --format='{{.Config.Entrypoint}}' busybox
+  一般为null，所以容器执行的命令就是CMD指定的命令
+Note
+
 let_cli_magic_start!

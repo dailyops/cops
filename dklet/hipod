@@ -1,0 +1,68 @@
+#!/usr/bin/env rundklet
+
+# ref https://docs.docker.com/engine/reference/builder/#usage
+set_dockerfile <<~Desc
+  FROM busybox:1.29
+  LABEL maintainer=dailyops
+Desc
+
+set_specfile <<~Desc
+  ---
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: hipod
+    labels:
+      from: dklet-kc-dailyops
+  spec:
+    containers:
+    - name: busybox
+      image: #{docker_image}
+      imagePullPolicy: Never
+      env:
+      - name: MESSAGE
+        value: "hello world"
+      command: ["/bin/echo"]
+      args: ["$(MESSAGE)"]
+      #command: ['ping']
+      #args: ['localhost']
+      #command: ["printenv"]
+      #args: ["HOSTNAME", "KUBERNETES_PORT"]
+    restartPolicy: OnFailure
+    # active time
+    #activeDeadlineSeconds: 20
+Desc
+
+task :main do
+  system <<~Desc
+    kubectl create -f #{specfile}
+    kubectl get pod hipod --show-labels
+  Desc
+end
+
+before_task :clean do
+  #--grace-period=1 or --now=true --force=true --grace-period=0
+  system "kubectl delete pod/hipod --ignore-not-found=true"
+  sleep 3 # wait for pod terminating ?
+end
+
+add_note <<~Note
+  https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+  kubectl label pods labelex owner=michael
+  kubectl get pods --show-labels
+  kubectl get pods --selector owner=michael
+  kubectl get pods -l 'env in (production, development)'
+
+  https://v1-10.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#container-v1-core
+
+  container command and args in pod context
+  https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+
+  ## fix stuck pod( in Terminating state forever)
+  #https://github.com/kubernetes/kubernetes/issues/51835
+  #kubectl get pods | awk '$3=="Terminating" {print "kubectl delete pod " $1 " --grace-period=0 --force"}' | xargs -0 bash -c
+  #--force --grace-period=0
+  #or restart k8s
+Note
+
+let_cli_magic_start!

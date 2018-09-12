@@ -213,11 +213,11 @@ class DockletCLI < Thor
   def file
     if options[:spec]
       puts File.read(specfile)
-      puts "# rendered at #{specfile}"
+      #puts "# rendered at #{specfile}"
     end
     if options[:dockerfile]
       puts File.read(dockerfile)
-      puts "# Dockerfile at #{dockerfile} "
+      #puts "# Dockerfile at #{dockerfile} "
     end
   end
 
