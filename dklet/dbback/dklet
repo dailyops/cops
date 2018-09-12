@@ -8,7 +8,7 @@ set_dockerfile <<~Desc
   ENTRYPOINT ["/backup-db.sh"]
   # as volume
   WORKDIR /dbs
-  CMD sh
+  CMD postgres://demo.url/db0
 Desc
 
 task :main do
