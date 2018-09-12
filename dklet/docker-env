@@ -27,7 +27,7 @@ task :main do
   Desc
 end
 
-extend_commands do
+custom_commands do
   def build
     system <<~Desc
       export var_in_args='a1'

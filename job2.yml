@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-cronjob
+  labels:
+    app: test-cronjob
+spec:
+  template:
+    spec:
+      containers:
+      - name: test-cronjob
+        image: ubuntu:16.04
+        args:
+        - /bin/bash
+        - -l
+        - -c
+        - sleep60
+      restartPolicy: Never
+  backoffLimit: 1

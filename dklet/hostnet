@@ -1,0 +1,29 @@
+#!/usr/bin/env rundklet
+
+set_dockerfile <<~Desc
+  # ref https://docs.docker.com/engine/reference/builder/#usage
+  FROM nginx:1.15-alpine
+  LABEL maintainer=dailyops
+Desc
+
+task :main do
+  system <<~Desc
+    docker run --rm -d --network host --name hostnet-ng #{docker_image}
+    curl -Lv http://localhost:80
+  Desc
+end
+
+add_note <<~Note
+
+  https://docs.docker.com/network/host/
+  https://docs.docker.com/network/network-tutorial-host/
+  http://www.dasblinkenlichten.com/docker-networking-101-host-mode/
+
+  * If you use the host network driver for a container, that container’s network stack is not isolated from the Docker host. 
+  * only works on Linux hosts, and is not supported on Docker for Mac, Docker for Windows, or Docker EE for Windows Server 
+  * since docker v17 you can use it as a parameter for your docker build: docker build --network=host. The specified host network for docker build is only for downloading packages that are necessary for building the image. When you want to run your container on the host network you'll still need to define the --network=host option
+  * the tradeoff is performance.  Containers running in the hosts network stack should see a higher level of performance than those traversing the docker0 bridge and iptables port mappings.
+
+Note
+
+let_cli_magic_start!

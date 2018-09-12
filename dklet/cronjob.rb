@@ -39,10 +39,6 @@ set_file_for :jobspec, <<~Desc
             restartPolicy: OnFailure
 Desc
 
-before_task :main do
-  invoke_clean
-end
-
 task :main do
   system <<~Desc
     kubectl create -f #{file_for(:jobspec)}
@@ -53,7 +49,7 @@ before_task :clean do
   system "kubectl delete cronjob/hello"
 end
 
-extend_commands do
+custom_commands do
   desc 'watch', 'watch jobs created'
   def watch
     puts <<~Desc

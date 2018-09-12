@@ -3,9 +3,9 @@ gemfile do
   source ENV['GEM_SOURCE'] || 'https://rubygems.org'
   gem "byebug"
   gem "thor"
+  gem 'method_source'
 end
-require 'byebug'
-require 'thor'
+
 require 'tempfile'
 require 'erb'
 
@@ -18,14 +18,33 @@ module DockDSL
     DockDSL.registry
   end
 
-  def docker_image
+  def set_docker_image(name, for_which: nil)
+    registry[norm_docker_image_key(for_which)] = name
+  end
+
+  def docker_image(for_which = nil)
+    provided = registry[norm_docker_image_key(for_which)]
+    return provided if provided
+    imgname = File.basename($PROGRAM_NAME, '.rb')
+    if imgname == 'dklet' # default name
+      imgname = File.basename(script_abspath)
+    end
     # NOTE: avoid use latest tag
-    "docklet/#{File.basename($PROGRAM_NAME, '.rb')}:newest"
+    "docklet/#{imgname}:newest"
+  end
+
+  def norm_docker_image_key(which=nil)
+    return :docker_image unless which
+    "docker_image_for_#{which}".to_sym
   end
 
   # 触发脚本所在目录
   def script_path
     File.dirname($PROGRAM_NAME)
+  end
+
+  def script_abspath
+    Pathname(script_path).realdirpath.to_s
   end
   
   def set_file_for(name, str)
@@ -47,19 +66,35 @@ module DockDSL
     ::Util.tmpfile_for(rendered)
   end
 
+  # Dockerfile for image build
   def set_dockerfile(str, name: nil)
-    set_file_for(norm_dockerfile(name), str)
+    set_file_for(norm_dockerfile_key(name), str)
   end
 
   def dockerfile(name=nil)
-    registry[norm_dockerfile(name)]
+    registry[norm_dockerfile_key(name)]
   end
 
-  def norm_dockerfile(name = nil)
+  def norm_dockerfile_key(name = nil)
     return :dockerfile unless name
     "dockerfile_for_#{name}".to_sym
   end
 
+  # specfile for k8s resources spec manifest
+  def set_specfile(str, name: nil)
+    set_file_for(norm_specfile_key(name), str)
+  end
+
+  def raw_specfile(name=nil)
+    registry[norm_specfile_key(name)]
+  end
+
+  def norm_specfile_key(name = nil)
+    return :specfile unless name
+    "specfile_for_#{name}".to_sym
+  end
+
+  # main dsl
   def task(name = :main, type: :after, &blk)
     hooks_name = "#{name}_#{type}_hooks".to_sym 
     (registry[hooks_name] ||= []) << blk
@@ -73,7 +108,7 @@ module DockDSL
     DockletCLI.start
   end
 
-  def extend_commands &blk
+  def custom_commands &blk
     DockletCLI.class_eval &blk
   end
 
@@ -106,14 +141,18 @@ class DockletCLI < Thor
   default_command :main
   class_option :debug, type: :boolean, default: false
 
-  desc 'main', 'main entry'
+  desc 'main', 'main user entry'
+  option :preclean, type: :boolean, default: true, banner: 'clean before do anything'
   option :build, type: :boolean, default: true, banner: 'build image'
   option :clean, type: :boolean, default: false, banner: 'clean image'
   def main
+    invoke_clean if options[:preclean]
+
     invoke_hooks_for(:main, type: :before)
     invoke :build, [], {} if options[:build]
     invoke_hooks_for(:main)
-    invoke :clean, [], {} if options[:clean]
+
+    invoke_clean if options[:clean]
   end
 
   desc 'runsh', 'docker run eg. interactive sh'
@@ -168,11 +207,18 @@ class DockletCLI < Thor
     invoke_hooks_for(:clean)
   end
 
-  desc 'spec', 'display spec eg. Dockerfile'
-  def spec
-    puts "## Dockerfile spec"
-    puts File.read(dockerfile)
-    invoke_hooks_for(:spec)
+  desc 'file', 'display spec files'
+  option :spec, type: :boolean, default: true, banner: 'show rendered specfile'
+  option :dockerfile, type: :boolean, default: false, banner: 'show Dockerfile'
+  def file
+    if options[:spec]
+      puts File.read(specfile)
+      puts "# rendered at #{specfile}"
+    end
+    if options[:dockerfile]
+      puts File.read(dockerfile)
+      puts "# Dockerfile at #{dockerfile} "
+    end
   end
 
   desc 'image_name', 'display image name'
@@ -201,6 +247,11 @@ class DockletCLI < Thor
           instance_eval &hook if hook.respond_to?(:call)
         end
       end
+    end
+
+    ## rendered in current context
+    def specfile
+      rendered_file_for(:specfile)
     end
   end
 end
