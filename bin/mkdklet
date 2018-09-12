@@ -18,8 +18,8 @@ exec "#{ENV['EDITOR'] || 'vi'} #{rpath}"
 __END__
 #!/usr/bin/env rundklet
 
+# ref https://docs.docker.com/engine/reference/builder/#usage
 set_dockerfile <<~Desc
-  # ref https://docs.docker.com/engine/reference/builder/#usage
   FROM alpine:3.7
   LABEL maintainer=dailyops
   CMD sh

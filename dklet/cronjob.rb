@@ -1,14 +1,15 @@
 #!/usr/bin/env rundklet
 
+# ref https://docs.docker.com/engine/reference/builder/#usage
 set_dockerfile <<~Desc
-  # ref https://docs.docker.com/engine/reference/builder/#usage
   FROM busybox:1.29
   LABEL maintainer=dailyops
   CMD sh
 Desc
 
 #kubectl run hello --schedule="*/1 * * * *" --restart=OnFailure --image=busybox -- /bin/sh -c "date; echo Hello from the Kubernetes cluster"
-set_file_for :jobspec, <<~Desc
+set_specfile <<~Desc
+  ---
   apiVersion: batch/v1beta1
   kind: CronJob
   metadata:
@@ -41,7 +42,7 @@ Desc
 
 task :main do
   system <<~Desc
-    kubectl create -f #{file_for(:jobspec)}
+    kubectl create -f #{specfile}
   Desc
 end
 

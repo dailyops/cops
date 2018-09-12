@@ -1,12 +1,13 @@
 #!/usr/bin/env rundklet
 
+# ref https://docs.docker.com/engine/reference/builder/#usage
 set_dockerfile <<~Desc
-  # ref https://docs.docker.com/engine/reference/builder/#usage
   FROM nginx:1.15-alpine
   LABEL maintainer=dailyops
 Desc
 
-set_file_for :spec, <<~Desc
+set_specfile <<~Desc
+  ---
   apiVersion: v1
   kind: Pod
   metadata:
@@ -23,7 +24,7 @@ Desc
 
 task :main do
   system <<~Desc
-    kubectl create -f #{file_for(:spec)}
+    kubectl create -f #{specfile}
     kubectl get pod ng --show-labels
   Desc
 end
