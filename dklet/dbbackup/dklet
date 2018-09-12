@@ -1,0 +1,38 @@
+#!/usr/bin/env rundklet
+
+# ref https://docs.docker.com/engine/reference/builder/#usage
+set_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL maintainer=dailyops
+  COPY entrypoint.sh /entrypoint.sh
+  # exec syntax as best practice
+  ENTRYPOINT ["/entrypoint.sh"]
+  #CMD [“executable”, “param1”, “param2”…]
+  # string syntax
+  #ENTRYPOINT command param1 param2
+  #CMD command param1 param2
+  CMD ["postgres://demo.url/db0"]
+Desc
+
+task :main do
+  system <<~Desc
+    docker run --rm #{docker_image}
+    docker run --rm #{docker_image} postgres://a.b.c/db1
+  Desc
+end
+
+add_note <<~Note
+  db backup demo using ENTRYPOINT
+
+  docker run --entrypoint xxx cmd1 # overwrite default ENTRYPOINT of the image
+  docker-compose run --entrypoint xxx
+
+  https://medium.freecodecamp.org/docker-entrypoint-cmd-dockerfile-best-practices-abc591c30e21
+
+  * Dockerfiles should specify at least one of CMD or ENTRYPOINT commands.
+  * ENTRYPOINT should be defined when using the container as an executable.
+  * CMD should be used as a way of defining default arguments for an ENTRYPOINT command or for executing an ad-hoc command in a container.
+  * CMD will be overridden when running the container with alternative arguments.
+Note
+
+let_cli_magic_start! # make dockerize fun with ruby 

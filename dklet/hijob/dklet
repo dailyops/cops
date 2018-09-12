@@ -48,14 +48,6 @@ before_task :clean do
   system 'kubectl delete job/hijob'
 end
 
-custom_commands do
-  def build
-    system <<~Desc
-      docker build --tag #{docker_image} --file #{dockerfile} #{script_path}
-    Desc
-  end
-end
-
 add_note <<~Note
   * https://v1-10.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#job-v1-batch
 Note

@@ -56,11 +56,14 @@ module DockDSL
   end
 
   def file_content_for(name)
-    File.read(registry[name])
+    fpath = registry[name]
+    return unless fpath
+    File.read(fpath)
   end
 
   def rendered_file_for(name, locals: {}, in_binding: binding)
     tmpl = file_content_for(name)
+    return unless tmpl
     erb = ERB.new(tmpl, nil, '%<>')
     rendered = erb.result(in_binding)
     ::Util.tmpfile_for(rendered)
@@ -92,6 +95,17 @@ module DockDSL
   def norm_specfile_key(name = nil)
     return :specfile unless name
     "specfile_for_#{name}".to_sym
+  end
+
+  def smart_build_context
+    key = :user_build_context
+    provided = registry[key]
+    return provided if registry.has_key?(key)
+    body = File.read(dockerfile)
+    # ADD xxx
+    # COPY xxx
+    need_current = body =~ /^\s*(ADD|COPY)\s/i
+    return :current if need_current 
   end
 
   # main dsl
@@ -140,6 +154,7 @@ end
 class DockletCLI < Thor
   default_command :main
   class_option :debug, type: :boolean, default: false
+  class_option :dry, type: :boolean, default: false
 
   desc 'main', 'main user entry'
   option :preclean, type: :boolean, default: true, banner: 'clean before do anything'
@@ -177,11 +192,14 @@ class DockletCLI < Thor
 
   desc 'build', 'build image'
   def build
-    #system "docker build --file xxx --tag #{docker_image} ."
-    #donot need build context
-    system <<~Desc
-      cat #{dockerfile} | docker build --tag #{docker_image} -
-    Desc
+    cxt = smart_build_context
+    cmd = if cxt # current
+      "docker build --tag #{docker_image} --file #{dockerfile} #{script_path}"
+    else # nil stand for do not need build context
+      "cat #{dockerfile} | docker build --tag #{docker_image} -"
+    end
+    puts "build cmd: #{cmd}" if options[:debug]
+    system cmd unless options[:dry]
   end
 
   desc 'log', 'log container todo'
@@ -211,11 +229,11 @@ class DockletCLI < Thor
   option :spec, type: :boolean, default: true, banner: 'show rendered specfile'
   option :dockerfile, type: :boolean, default: false, banner: 'show Dockerfile'
   def file
-    if options[:spec]
+    if options[:spec] && specfile
       puts File.read(specfile)
       #puts "# rendered at #{specfile}"
     end
-    if options[:dockerfile]
+    if options[:dockerfile] && dockerfile
       puts File.read(dockerfile)
       #puts "# Dockerfile at #{dockerfile} "
     end

@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 set -e
 
-printenv
+#printenv
 echo ==will backup db: $@ ...
-
 
