@@ -18,12 +18,20 @@ module DockDSL
     DockDSL.registry
   end
 
+  def register(key, value)
+    registry[key] = value
+  end
+
+  def fetch(key)
+    registry[key]
+  end
+
   def set_docker_image(name, for_which: nil)
-    registry[norm_docker_image_key(for_which)] = name
+    register norm_docker_image_key(for_which), name
   end
 
   def docker_image(for_which = nil)
-    provided = registry[norm_docker_image_key(for_which)]
+    provided = fetch(norm_docker_image_key(for_which))
     return provided if provided
     imgname = File.basename($PROGRAM_NAME, '.rb')
     if imgname == 'dklet' # default name
@@ -48,15 +56,15 @@ module DockDSL
   end
   
   def set_file_for(name, str)
-    registry[name] = ::Util.tmpfile_for(str)
+    register name, ::Util.tmpfile_for(str)
   end
 
   def file_for(name)
-    registry[name]
+    fetch(name)
   end
 
   def file_content_for(name)
-    fpath = registry[name]
+    fpath = fetch(name)
     return unless fpath
     File.read(fpath)
   end
@@ -75,7 +83,7 @@ module DockDSL
   end
 
   def dockerfile(name=nil)
-    registry[norm_dockerfile_key(name)]
+    fetch(norm_dockerfile_key(name))
   end
 
   def norm_dockerfile_key(name = nil)
@@ -89,7 +97,7 @@ module DockDSL
   end
 
   def raw_specfile(name=nil)
-    registry[norm_specfile_key(name)]
+    fetch(norm_specfile_key(name))
   end
 
   def norm_specfile_key(name = nil)
@@ -99,7 +107,7 @@ module DockDSL
 
   def smart_build_context
     key = :user_build_context
-    provided = registry[key]
+    provided = fetch(key)
     return provided if registry.has_key?(key)
     body = File.read(dockerfile)
     # ADD xxx
@@ -135,7 +143,7 @@ module DockDSL
   end
 
   def user_notes
-    registry[:user_notes]
+    fetch(:user_notes)
   end
 end
 
@@ -184,10 +192,10 @@ class DockletCLI < Thor
   end
 
   desc 'daemon', 'docker run in daemon'
-  option :opt, banner: 'run extra options'
+  option :opts, banner: 'run extra options'
   def daemon
     invoke :build, [], {}
-    system "docker run --detach #{options[:opt]} #{docker_image}"
+    system "docker run --detach #{options[:opts]} #{docker_image}" unless options[:dry]
   end
 
   desc 'build', 'build image'
@@ -265,7 +273,7 @@ class DockletCLI < Thor
 
     def invoke_hooks_for(name = :main, type: :after)
       hooks_name = "#{name}_#{type}_hooks".to_sym
-      hooks = registry[hooks_name]
+      hooks = fetch(hooks_name)
       if hooks && !hooks.empty?
         hooks.each do |hook|
           # eval by receiver dierectly

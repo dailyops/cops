@@ -6,13 +6,12 @@ write_dockerfile <<~Desc
   ADD entrypoint-initdb.d /docker-entrypoint-initdb.d
 Desc
 
-registry[:password] = 'password'
+register :password, 'password'
 
 task :main do
-  # debian /usr/share/postgresql/postgresql.conf.sample
   system <<~Desc
-    #docker run -d --name hipg -e POSTGRES_PASSWORD=#{registry[:password]} #{docker_image}
-    docker run -d --name hipg -e POSTGRES_PASSWORD=#{registry[:password]} \
+    #docker run -d --name hipg -e POSTGRES_PASSWORD=#{fetch(:password)} #{docker_image}
+    docker run -d --name hipg -e POSTGRES_PASSWORD=#{fetch(:password)} \
       -v "#{script_abspath}/conf/postgresql.conf":/etc/postgresql/postgresql.conf \
       #{docker_image} -c 'config_file=/etc/postgresql/postgresql.conf'
     # -c 'shared_buffers=256MB' -c 'max_connections=200'
@@ -26,15 +25,24 @@ end
 custom_commands do
   desc 'sampleconf', ''
   def sampleconf
+    # debian /usr/share/postgresql/postgresql.conf.sample
     system <<~Desc
       docker run -i --rm #{docker_image} cat /usr/local/share/postgresql/postgresql.conf.sample | tee #{script_path}/conf/postgresql.conf.sample
+      docker run -i --rm #{docker_image} cat /usr/local/share/postgresql/pg_hba.conf.sample | tee #{script_path}/conf/pg_hba.conf.sample
     Desc
   end
 
   desc 'psql', 'open a psql connection'
   def psql
-    pgurl = "postgres://postgres:#{registry[:password]}@hipg/postgres"
-    # use legacy link --link <name or id>:alias
+    system <<~Desc
+      docker exec -it hipg psql -U postgres
+    Desc
+  end
+
+  # use legacy link --link <name or id>:alias
+  desc 'psql_link', 'open a psql connection using link mode'
+  def psql_link
+    pgurl = "postgres://postgres:#{fetch(:password)}@hipg/postgres"
     system <<~Desc
       docker run -it --rm --link hipg #{docker_image} psql #{pgurl}
     Desc
