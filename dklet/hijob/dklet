@@ -12,8 +12,8 @@ write_specfile <<~Desc
   kind: Job
   metadata:
     name: hijob
-    #labels:
-      #role: geekjob
+    labels:
+      from: dklet-kc-dailyops
   spec:
     # require num of completed success 
     #completions: 5

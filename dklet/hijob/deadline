@@ -1,0 +1,46 @@
+#!/usr/bin/env rundklet
+
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  CMD ping localhost
+Desc
+
+set_docker_image 'docklet/hijob:deadline'
+
+write_specfile <<~Desc
+  apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: hi-longjob
+    labels:
+      from: dklet-kc-dailyops
+  spec:
+    # wait job running time in seconds, 过期后就会被终止
+    # 最大存活时间, Specifies the duration in seconds relative to the startTime that the job may be active before the system tries to terminate it; value must be positive 
+    activeDeadlineSeconds: 10
+    template:
+      spec:
+        containers:
+        - name: hi-longjob
+          #image: not-exist-img:1.2.3
+          image: <%=docker_image%>
+        restartPolicy: Never
+Desc
+
+task :main do
+  system <<~Desc
+    kubectl create -f #{specfile} 
+    sleep 3
+    kubectl logs -l job-name=hi-longjob
+  Desc
+end
+
+before_task :clean do
+  system 'kubectl delete job/hi-longjob'
+end
+
+add_note <<~Note
+  * https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
+Note
+
+let_cli_magic_start!

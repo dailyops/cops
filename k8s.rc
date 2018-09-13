@@ -107,6 +107,7 @@ kc(){
     kcns reset
     ;;
   all)
+    shift
     kc get all --all-namespaces -owide $@
     ;;
   *)

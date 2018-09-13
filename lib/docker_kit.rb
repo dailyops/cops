@@ -225,10 +225,10 @@ class DockletCLI < Thor
     invoke_hooks_for(:clean)
   end
 
-  desc 'file', 'display spec files'
+  desc 'spec', 'display specs'
   option :spec, type: :boolean, default: true, banner: 'show rendered specfile'
-  option :dockerfile, type: :boolean, default: false, banner: 'show Dockerfile'
-  def file
+  option :dockerfile, type: :boolean, default: true, banner: 'show Dockerfile'
+  def spec
     if options[:spec] && specfile
       puts File.read(specfile)
       #puts "# rendered at #{specfile}"
@@ -248,6 +248,13 @@ class DockletCLI < Thor
   def image
     system "docker images #{docker_image}"
   end 
+
+  desc 'ps', 'ps related containers'
+  def ps
+    system <<~Desc
+      docker ps -f ancestor=#{docker_image} -a
+    Desc
+  end
 
   no_commands do
     include DockDSL

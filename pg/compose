@@ -1,0 +1,57 @@
+#!/usr/bin/env rundklet
+
+write_dockerfile <<~Desc
+  FROM postgres:9.6-alpine
+  LABEL maintainer=dailyops
+Desc
+
+set_docker_image 'docklet/pg-compose:newest'
+
+write_specfile <<~Desc
+  # Use postgres/example user/password credentials
+  version: '3.1'
+  services:
+    db:
+      image: #{docker_image}
+      restart: always
+      environment:
+        #superuser password
+        #POSTGRES_PASSWORD: example
+        POSTGRES_PASSWORD: password
+        # PGPASSWORD often used by psql at runtime
+        # POSTGRES_USER: postgres
+        # location of database files
+        # PGDATA: /var/lib/postgresql/data
+        # POSTGRES_DB: postgres
+        # used to send arguments to postgres initdb
+        # POSTGRES_INITDB_ARGS: eg. --data-checksums
+        # POSTGRES_INITDB_WALDIR: 10+, POSTGRES_INITDB_XLOGDIR if 9.x 
+    adminer:
+      image: adminer:4.6
+      restart: always
+      ports:
+        - 8080:8080
+Desc
+
+#docker-compose -f stack.yml up
+# or docker swarm
+#docker stack deploy -c stack.yml postgres
+task :main do
+  system <<~Desc
+    docker-compose -f #{specfile} up -d
+    sleep 3 # wait for initdb complete
+    open http://localhost:8080/?pgsql=db&username=postgres
+  Desc
+end
+
+before_task :clean do
+  system <<~Desc
+    docker-compose -f #{specfile} down --volumes
+  Desc
+end
+
+add_note <<~Note
+  make quick note here
+Note
+
+let_cli_magic_start! # make dockerize fun with ruby 
