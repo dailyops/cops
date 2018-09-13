@@ -10,6 +10,18 @@ require 'tempfile'
 require 'erb'
 
 module DockDSL
+  def lib_path
+    Pathname(__dir__)
+  end
+
+  def root_path
+    lib_path.parent
+  end
+
+  def tmp_path
+    root_path.join('tmp')
+  end
+
   def self.registry
     @_registry ||= {}
   end

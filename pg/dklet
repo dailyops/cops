@@ -13,12 +13,17 @@ task :main do
     #docker run -d --name hipg -e POSTGRES_PASSWORD=#{fetch(:password)} #{docker_image}
     docker run -d --name hipg -e POSTGRES_PASSWORD=#{fetch(:password)} \
       -v "#{script_abspath}/conf/postgresql.conf":/etc/postgresql/postgresql.conf \
+      -v "#{tmp_path.join('hipg-data')}":/var/lib/postgresql/data \
       #{docker_image} -c 'config_file=/etc/postgresql/postgresql.conf'
     # -c 'shared_buffers=256MB' -c 'max_connections=200'
   Desc
   
-  puts "waiting for initdb..."
-  sleep 5
+  t0 = Time.now
+  until system("docker exec hipg pg_isready > /dev/null")
+    puts "waiting for initdb..."
+    sleep 1
+  end
+  puts "wait taken #{Time.now - t0} seconds"
   invoke :psql
 end
 
@@ -35,7 +40,7 @@ custom_commands do
   desc 'psql', 'open a psql connection'
   def psql
     system <<~Desc
-      docker exec -it hipg psql -U postgres
+      docker exec -it hipg psql -U postgres docker
     Desc
   end
 
