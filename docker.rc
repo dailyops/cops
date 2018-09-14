@@ -231,8 +231,4 @@ function dkgcr(){
 
 # minikube start --help
 
-## container access Mac host
-# docker.for.mac.host.internal
-
-# docker network create --driver bridge postgres-network
 # docker volume create pgdata

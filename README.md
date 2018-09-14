@@ -4,14 +4,22 @@
 
 * dk for docker wraper
 * kc for kubectl wrapper
-* dklet refer to a practical dsl powered by ruby
+* dklet refer to a practical DSL powered by ruby
 
-## Familar with dklet dsl
+## Quick start
+
+* install ruby & Docker
+* add `bin` into your `PATH`
+* try some examples
 
 ```
-rake dklet:hi
-```
+rake dklet:hi # a quick hi task
+dklet/try     # a dklet script
+pg/dklet      # try pg using dklet
+``` 
 
-## make rails dockerize
+## Dockerize apps
 
-todo
+### Rails app
+
+* [Rails on Docker & k8s](https://github.com/dailyops/hirails)
