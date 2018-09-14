@@ -136,14 +136,21 @@ module DockDSL
   end
 
   # main dsl
-  def task(name = :main, type: :after, &blk)
+  def task(name = :main, opts={}, &blk)
+    type = opts.delete(:type) || :after
     hooks_name = "#{name}_#{type}_hooks".to_sym 
     (registry[hooks_name] ||= []) << blk
+    task_opts(name).merge!(opts) unless opts.empty?
   end
 
   def before_task(name = :main, &blk)
     task(name, type: :before, &blk)
   end 
+
+  def task_opts(name = :main)
+    key = "opts_for_task_#{name}".to_sym
+    registry[key] ||= {}
+  end
 
   def let_cli_magic_start!
     DockletCLI.start
@@ -188,7 +195,8 @@ class DockletCLI < Thor
   option :build, type: :boolean, default: true, banner: 'build image'
   option :clean, type: :boolean, default: false, banner: 'clean image'
   def main
-    invoke_clean if options[:preclean] && !disabled?(:main_preclean)
+    task_preclean = task_opts(:main)[:preclean]
+    invoke_clean if options[:preclean] && (task_preclean.nil? || task_preclean)
 
     invoke_hooks_for(:main, type: :before)
     invoke :build, [], {} if options[:build]
@@ -248,6 +256,7 @@ class DockletCLI < Thor
     system <<~Desc
       cids=$(docker ps -aq -f ancestor=#{docker_image})
       if [ -n "$cids" ]; then
+        echo ==clean containers: $cids
         # --volumes
         docker rm --force $cids
       fi
@@ -257,6 +266,8 @@ class DockletCLI < Thor
         echo ==clean image: #{docker_image}
         docker rmi --force #{docker_image}
       Desc
+    else
+      puts 'no dockerfile provided' if options[:debug]
     end
     invoke_hooks_for(:clean)
   end

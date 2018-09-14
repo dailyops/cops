@@ -24,7 +24,8 @@ task :main do
     sleep 1
   end
   puts "wait taken #{Time.now - t0} seconds"
-  invoke :psql
+  # todo FIXME
+  invoke :psql, [], {} unless options[:clean]
 end
 
 custom_commands do
