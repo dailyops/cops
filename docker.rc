@@ -100,7 +100,7 @@ function dkrmbyimg(){
 function dkrmi(){
   iids=$(docker images -f "dangling=true" -q)
   if [ -n "$iids" ];then
-    docker rmi "$iids" 
+    docker rmi -f $iids 
     echo ==removed images $iids
   fi
 }

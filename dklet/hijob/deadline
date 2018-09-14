@@ -5,7 +5,7 @@ write_dockerfile <<~Desc
   CMD ping localhost
 Desc
 
-set_docker_image 'docklet/hijob:deadline'
+register_docker_image 'docklet/hijob:deadline'
 
 write_specfile <<~Desc
   apiVersion: batch/v1

@@ -26,7 +26,7 @@ module DockDSL
     registry[key]
   end
 
-  def set_docker_image(name, for_which: nil)
+  def register_docker_image(name, for_which: nil)
     register norm_docker_image_key(for_which), name
   end
 
@@ -82,12 +82,30 @@ module DockDSL
   end
 
   # Dockerfile for image build
-  def write_dockerfile(str, name: nil)
+  def write_dockerfile(str, name: nil, path: nil)
     set_file_for(norm_dockerfile_key(name), str)
+    use_build_path(path) if path
   end
 
   def dockerfile(name=nil)
     fetch(norm_dockerfile_key(name))
+  end
+
+  def use_build_path(path)
+    return unless path
+    path = path.to_s if path.is_a?(Pathname)
+    register :user_build_path, path
+  end
+
+  def smart_build_context_path
+    key = :user_build_path
+    provided = fetch(key)
+    return provided if registry.has_key?(key)
+    body = File.read(dockerfile)
+    # ADD xxx
+    # COPY xxx
+    need_path = body =~ /^\s*(ADD|COPY)\s/i
+    return script_path if need_path
   end
 
   def norm_dockerfile_key(name = nil)
@@ -109,20 +127,12 @@ module DockDSL
     "specfile_for_#{name}".to_sym
   end
 
-  def use_build_path(path)
-    path = path.to_s if path.is_a?(Pathname)
-    register :user_build_path, path
+  def disable(key)
+    (registry[:disable] ||= {})[key] = true
   end
 
-  def smart_build_context_path
-    key = :user_build_path
-    provided = fetch(key)
-    return provided if registry.has_key?(key)
-    body = File.read(dockerfile)
-    # ADD xxx
-    # COPY xxx
-    need_path = body =~ /^\s*(ADD|COPY)\s/i
-    return script_path if need_path
+  def disabled?(key)
+    (registry[:disable] ||= {})[key]
   end
 
   # main dsl
@@ -178,7 +188,7 @@ class DockletCLI < Thor
   option :build, type: :boolean, default: true, banner: 'build image'
   option :clean, type: :boolean, default: false, banner: 'clean image'
   def main
-    invoke_clean if options[:preclean]
+    invoke_clean if options[:preclean] && !disabled?(:main_preclean)
 
     invoke_hooks_for(:main, type: :before)
     invoke :build, [], {} if options[:build]
@@ -209,13 +219,14 @@ class DockletCLI < Thor
 
   desc 'build', 'build image'
   def build
+    return unless dockerfile
     bpath = smart_build_context_path
     cmd = if bpath
       "docker build --tag #{docker_image} --file #{dockerfile} #{bpath}"
     else # nil stand for do not need build context
       "cat #{dockerfile} | docker build --tag #{docker_image} -"
     end
-    puts "build cmd: #{cmd}" if options[:debug]
+    puts "build command:\n  #{cmd}" if options[:debug]
     system cmd unless options[:dry]
   end
 
@@ -236,9 +247,17 @@ class DockletCLI < Thor
     invoke_hooks_for(:clean, type: :before)
     system <<~Desc
       cids=$(docker ps -aq -f ancestor=#{docker_image})
-      [ -n "$cids" ] && docker rm --force --volumes "$cids"
-      docker rmi --force #{docker_image}
+      if [ -n "$cids" ]; then
+        # --volumes
+        docker rm --force $cids
+      fi
     Desc
+    if dockerfile # user defined image
+      system <<~Desc
+        echo ==clean image: #{docker_image}
+        docker rmi --force #{docker_image}
+      Desc
+    end
     invoke_hooks_for(:clean)
   end
 

@@ -1,0 +1,24 @@
+#!/usr/bin/env rundklet
+
+register_docker_image "busybox:1.29"
+register :netname, "dknet-test1"
+
+task :main do
+  system <<~Desc
+    docker network create --driver bridge #{fetch(:netname)}
+    docker run -d --name app1 --net=#{fetch(:netname)} #{docker_image} ping localhost
+    docker run -it --rm --name app2 --net=#{fetch(:netname)} #{docker_image} ping app1
+  Desc
+end
+
+task :clean do
+  system <<~Desc
+    docker network rm #{fetch(:netname)}
+  Desc
+end
+
+add_note <<~Note
+  try docker network
+Note
+
+let_cli_magic_start! # make dockerize fun with ruby 

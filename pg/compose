@@ -5,7 +5,7 @@ write_dockerfile <<~Desc
   LABEL maintainer=dailyops
 Desc
 
-set_docker_image 'docklet/pg-compose:newest'
+register_docker_image 'docklet/pg-compose:newest'
 
 write_specfile <<~Desc
   # Use postgres/example user/password credentials
