@@ -12,8 +12,8 @@ Desc
 task :main do
   system <<~Desc
     docker run --name dkng -p 28384:80 \
-      -v #{script_abspath}/conf/nginx.conf:/etc/nginx/nginx.conf \
-      -v #{script_abspath}/site/html:/usr/share/nginx/html \
+      -v #{script_path}/conf/nginx.conf:/etc/nginx/nginx.conf \
+      -v #{script_path}/site/html:/usr/share/nginx/html \
       -d #{docker_image}   
     curl http://localhost:28384
     docker logs -t --details dkng

@@ -33,9 +33,9 @@ module DockDSL
   def docker_image(for_which = nil)
     provided = fetch(norm_docker_image_key(for_which))
     return provided if provided
-    imgname = File.basename($PROGRAM_NAME, '.rb')
+    imgname = dklet_script.basename('.rb').to_s
     if imgname == 'dklet' # default name
-      imgname = File.basename(script_abspath)
+      imgname = script_path.basename.to_s
     end
     # NOTE: avoid use latest tag
     "docklet/#{imgname}:newest"
@@ -48,11 +48,11 @@ module DockDSL
 
   # 触发脚本所在目录
   def script_path
-    Pathname($PROGRAM_NAME).dirname
+    dklet_script.realdirpath.dirname
   end
 
-  def script_abspath
-    script_path.realdirpath
+  def dklet_script
+    Pathname($PROGRAM_NAME)
   end
 
   def dklet_lib_path
@@ -122,7 +122,7 @@ module DockDSL
     # ADD xxx
     # COPY xxx
     need_path = body =~ /^\s*(ADD|COPY)\s/i
-    return script_abspath if need_path
+    return script_path if need_path
   end
 
   # main dsl

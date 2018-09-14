@@ -12,8 +12,8 @@ task :main do
   system <<~Desc
     #docker run -d --name hipg -e POSTGRES_PASSWORD=#{fetch(:password)} #{docker_image}
     docker run -d --name hipg -e POSTGRES_PASSWORD=#{fetch(:password)} \
-      -v "#{script_abspath}/conf/postgresql.conf":/etc/postgresql/postgresql.conf \
-      -v "#{script_abspath.parent.join('tmp/hipg-data')}":/var/lib/postgresql/data \
+      -v "#{script_path}/conf/postgresql.conf":/etc/postgresql/postgresql.conf \
+      -v "#{script_path.parent.join('tmp/hipg-data')}":/var/lib/postgresql/data \
       #{docker_image} -c 'config_file=/etc/postgresql/postgresql.conf'
     # -c 'shared_buffers=256MB' -c 'max_connections=200'
   Desc
