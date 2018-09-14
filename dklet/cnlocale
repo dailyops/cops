@@ -1,0 +1,24 @@
+#!/usr/bin/env rundklet
+
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL maintainer=dailyops
+  ARG TIMEZONE=Asia/Shanghai
+  RUN apk update && \
+      apk add --no-cache tzdata && \
+      cp /usr/share/zoneinfo/${TIMEZONE} /etc/localtime && \
+      echo "${TIMEZONE}" >  /etc/timezone && \
+      echo "Timezone set to: $TIMEZONE"
+Desc
+
+task :main do
+  system <<~Desc
+    docker run --rm #{docker_image} sh -c "date; echo 中国你好"
+  Desc
+end
+
+add_note <<~Note
+  make quick note here
+Note
+
+let_cli_magic_start! # make dockerize fun with ruby 

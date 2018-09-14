@@ -23,11 +23,13 @@ __END__
 write_dockerfile <<~Desc
   FROM alpine:3.7
   LABEL maintainer=dailyops
-  CMD sh
+  #CMD sh
 Desc
 
 task :main do
-  #puts "add your logic here with image: #{docker_image}"
+  system <<~Desc
+    # docker run --rm #{docker_image} echo run something in container shell
+  Desc
 end
 
 add_note <<~Note

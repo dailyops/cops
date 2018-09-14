@@ -10,18 +10,6 @@ require 'tempfile'
 require 'erb'
 
 module DockDSL
-  def lib_path
-    Pathname(__dir__)
-  end
-
-  def root_path
-    lib_path.parent
-  end
-
-  def tmp_path
-    root_path.join('tmp')
-  end
-
   def self.registry
     @_registry ||= {}
   end
@@ -60,11 +48,15 @@ module DockDSL
 
   # 触发脚本所在目录
   def script_path
-    File.dirname($PROGRAM_NAME)
+    Pathname($PROGRAM_NAME).dirname
   end
 
   def script_abspath
-    Pathname(script_path).realdirpath.to_s
+    script_path.realdirpath
+  end
+
+  def dklet_lib_path
+    Pathname(__dir__)
   end
   
   def set_file_for(name, str)
@@ -117,15 +109,20 @@ module DockDSL
     "specfile_for_#{name}".to_sym
   end
 
-  def smart_build_context
-    key = :user_build_context
+  def use_build_path(path)
+    path = path.to_s if path.is_a?(Pathname)
+    register :user_build_path, path
+  end
+
+  def smart_build_context_path
+    key = :user_build_path
     provided = fetch(key)
     return provided if registry.has_key?(key)
     body = File.read(dockerfile)
     # ADD xxx
     # COPY xxx
-    need_current = body =~ /^\s*(ADD|COPY)\s/i
-    return :current if need_current 
+    need_path = body =~ /^\s*(ADD|COPY)\s/i
+    return script_abspath if need_path
   end
 
   # main dsl
@@ -212,9 +209,9 @@ class DockletCLI < Thor
 
   desc 'build', 'build image'
   def build
-    cxt = smart_build_context
-    cmd = if cxt # current
-      "docker build --tag #{docker_image} --file #{dockerfile} #{script_path}"
+    bpath = smart_build_context_path
+    cmd = if bpath
+      "docker build --tag #{docker_image} --file #{dockerfile} #{bpath}"
     else # nil stand for do not need build context
       "cat #{dockerfile} | docker build --tag #{docker_image} -"
     end
