@@ -1,7 +1,7 @@
 #!/usr/bin/env rundklet
 
 add_note <<~Note
-  access services on Mac host in a container
+  access services on Mac host from containers
   https://docs.docker.com/docker-for-mac/networking/#known-limitations-use-cases-and-workarounds
 Note
 
@@ -17,10 +17,10 @@ task :main do
   #From 18.03+
   host_domain = 'host.docker.internal'
   # The gateway is also reachable as gateway.docker.internal
+  
   system <<~Desc
-    docker run -d -p #{hport}:80 #{docker_image}
-    docker run --rm busybox:1.29 wget -O- http://#{host_domain}:#{hport}
-    docker run -it --rm busybox:1.29 sh
+    docker run --name mock-host-ng -d -p #{hport}:80 #{docker_image}
+    docker run --rm -it busybox:1.29 sh -l -c "wget -O- http://#{host_domain}:#{hport}; echo try anything in containers; sh"
   Desc
 end
 

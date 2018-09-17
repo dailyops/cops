@@ -195,11 +195,10 @@ class DockletCLI < Thor
   option :build, type: :boolean, default: true, banner: 'build image'
   option :clean, type: :boolean, default: false, banner: 'clean image'
   def main
-    task_preclean = task_opts(:main)[:preclean]
-    invoke_clean if options[:preclean] && (task_preclean.nil? || task_preclean)
+    invoke_clean if options[:preclean] && task_opts(:main)[:preclean] != false
 
     invoke_hooks_for(:main, type: :before)
-    invoke :build, [], {} if options[:build]
+    invoke :build, [], {} if options[:build] && task_opts(:main)[:build] != false
     invoke_hooks_for(:main)
 
     invoke_clean if options[:clean]
@@ -207,15 +206,30 @@ class DockletCLI < Thor
 
   desc 'runsh', 'docker run eg. interactive sh'
   option :cmd, banner: 'run command', default: 'sh'
+  option :opts, banner: 'run options'
   def runsh
     invoke :build, [], {}
-    system "docker run --rm -it #{docker_image} #{options[:cmd]}"
+    #byebug
+    #puts "docker run --rm -it #{options[:opts]} #{docker_image} #{options[:cmd]}" if options[:debug]
+    system "docker run --rm -it #{options[:opts]} #{docker_image} #{options[:cmd]}"
   end
 
   desc 'console', 'get ruby console'
   def console
     byebug
     puts 'finish' if options[:debug]
+  end
+
+  desc 'into', 'go into a running container'
+  def into
+    cids = `docker ps -aq -f ancestor=#{docker_image}`
+    if cids.length > 0
+      cid = cids.split("\n").first
+      puts "run sh in container: #{cid} of #{docker_image}"
+      system "docker exec -it #{cid} sh"
+    else
+      puts "No container for image #{docker_image}"
+    end
   end
 
   desc 'daemon', 'docker run in daemon'
@@ -235,7 +249,11 @@ class DockletCLI < Thor
       "cat #{dockerfile} | docker build --tag #{docker_image} -"
     end
     puts "build command:\n  #{cmd}" if options[:debug]
-    system cmd unless options[:dry]
+
+    unless options[:dry]
+      invoke_hooks_for(:build, type: :before)
+      system cmd 
+    end
   end
 
   desc 'log', 'log container todo'
