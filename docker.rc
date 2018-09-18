@@ -229,9 +229,17 @@ function dkgcr(){
   docker pull gcr.io/google_containers/pause-amd64:3.0 # 194k
 }
 
-# minikube start --help
-
-# docker volume create pgdata
+# 列出该网络下所有容器
+dnetps(){
+  docker network inspect -f '{{ range $key, $value := .Containers }}{{ printf "%s\n" $value.Name }}{{ end }}' $@
+}
 
 return 0
-prefer system location on mac /Volumes/docker
+
+## volumes
+system location on mac /Volumes/docker
+linkto user home xxx
+# docker volume create pgdata
+
+# minikube start --help
+
