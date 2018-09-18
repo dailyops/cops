@@ -177,15 +177,16 @@ module DockDSL
     fetch(:netname)
   end
 
-  def register_net(name = :default, build: false)
+  def register_net(name = :dailyops, build: false)
     register :netname, name
     build_docker_net(name) if build
   end
 
   def build_docker_net(name, driver: :bridge)
-    cmd = "docker network ls --filter name=#{name} -q"
-    netid = `#{cmd}`
-    if netid.length < 1
+    #cmd = "docker network ls --filter name=#{name} -q"
+    cmd = "docker network ls --format '{{.Name}}' --filter name=#{name}"
+    netid = `#{cmd}`.chomp
+    if netid.length < 1 || netid != name # avoid substr match
       netid = `docker network create #{name} --driver=#{driver}`
     end
     netid
@@ -351,7 +352,7 @@ class DockletCLI < Thor
   option :force, type: :boolean, default: false, banner: 'rm forcely'
   def netdown(name = netname)
     return unless name
-    global_nets = %i(global default)
+    global_nets = %i(dailyops)
     if global_nets.include?(name.to_sym)
       puts "donot clean global net: #{name}" if options[:debug]
       return

@@ -1,0 +1,40 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  try docker-compose fetatures
+Note
+
+register_net 'compose-try'
+
+#https://docs.docker.com/compose/compose-file/
+write_specfile <<~Desc
+  version: '3.1'
+  services:
+    web:
+      image: nginx:1.15-alpine
+      ports:
+       - "18485:80"
+      #environment:
+       #- NGINX_HOST=foobar.com
+       #- NGINX_PORT=80
+    ops:
+      image: busybox:1.29
+      command: ping localhost
+  networks:
+    default:
+      external:
+        name: #{netname}
+Desc
+
+task :main do
+  invoke :netup, [], {}
+  system <<~Desc
+    # docker run --rm #{docker_image} echo xxx in container shell
+    docker-compose -f #{specfile} up -d
+  Desc
+end
+
+task :clean do
+  invoke :netdown, [], {}
+end
+
+let_cli_magic_start! # make dockerize fun with ruby 

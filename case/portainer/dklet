@@ -8,14 +8,17 @@ add_note <<~Note
 Note
 
 # user/passwd: admin/portainer
-register :vol_root, "/Volumes/docker"
 register_docker_image 'portainer/portainer'
+register :vol_root, "/Volumes/docker"
+register_net
 
+#https://portainer.readthedocs.io/en/stable/deployment.html#quick-start
 task :main do
-  #https://portainer.readthedocs.io/en/stable/deployment.html#quick-start
+  invoke :netup, [], {}
   system <<~Desc
-    docker volume create portainer_data
-    docker run -d -p 9000:9000 --name portainer --restart always \
+    #docker volume create portainer_data
+    docker run -d -p 9000:9000 \
+      --net #{netname} --name portainer --restart always \
       -v /var/run/docker.sock:/var/run/docker.sock \
       -v #{fetch(:vol_root)}/portainer:/data #{docker_image}
     open http://localhost:9000
@@ -24,7 +27,6 @@ end
 
 task :clean do
   system <<~Desc
-    docker volume rm portainer_data
   Desc
 end
 
