@@ -1,8 +1,13 @@
 #!/usr/bin/env rundklet
 add_note <<~Note
-  try docker-compose fetatures
-  https://docs.docker.com/v17.09/compose/networking/#use-a-pre-existing-network
+  Error to join default bridge network
+
+  Creating default_bridge_ops_1 ... error
+  ERROR: for default_bridge_ops_1  network-scoped alias is supported only for containers in user defined networks
 Note
+
+#register_net 'bridge'
+register_net 'dailyops'
 
 #https://docs.docker.com/compose/compose-file/
 write_specfile <<~Desc
@@ -13,6 +18,10 @@ write_specfile <<~Desc
     ops:
       image: busybox:1.29
       command: ping localhost
+  networks:
+    default:
+      external:
+        name: #{netname}
 Desc
 
 task :main do

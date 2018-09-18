@@ -210,6 +210,14 @@ module DockDSL
   def compose_cmd
     "docker-compose -f #{specfile} --project-name #{compose_name} --project-directory #{script_path}"
   end 
+
+  def register_ops(cid)
+    register :ops_container, cid
+  end
+
+  def ops_container
+    fetch(:ops_container)
+  end
 end
 
 module Util
@@ -261,6 +269,11 @@ class DockletCLI < Thor
 
   desc 'into', 'go into a running container'
   def into
+    if con = ops_container
+      system "docker exec -it #{con} sh"
+      return
+    end
+
     cids = `docker ps -aq -f ancestor=#{docker_image}`
     if cids.length > 0
       cid = cids.split("\n").first
@@ -295,10 +308,13 @@ class DockletCLI < Thor
     end
   end
 
-  desc 'log', 'log container todo'
-  def log
-    puts <<~Desc
-      docker logs -t -f --details containerxxx 
+  desc 'log [OPS_CONTAINER]', 'log container todo'
+  def log(cid = ops_container)
+    unless cid
+      abort "No container provided!"
+    end
+    system <<~Desc
+      docker logs -t -f --details #{cid}
     Desc
   end
 

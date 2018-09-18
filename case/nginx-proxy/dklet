@@ -1,17 +1,19 @@
 #!/usr/bin/env rundklet
-
 add_note <<~Note
   Automated nginx proxy for Docker containers using docker-gen
   https://github.com/jwilder/nginx-proxy
   https://hub.docker.com/r/jwilder/nginx-proxy/
 Note
 
+register_net
+register_ops "nginx-proxy"
+
 write_specfile <<~Desc
   version: '2'
   services:
     nginx-proxy:
       image: jwilder/nginx-proxy:alpine-0.7.0
-      container_name: nginx-proxy
+      container_name: #{ops_container}
       restart: always
       ports:
         - "80:80"
@@ -22,9 +24,14 @@ write_specfile <<~Desc
       image: jwilder/whoami
       environment:
         - VIRTUAL_HOST=whoami.lh
+  networks:
+    default:
+      external:
+        name: #{netname}
 Desc
 
 task :main do
+  invoke :netup, [], {}
   system <<~Desc
     #{compose_cmd} up -d
   Desc
@@ -34,6 +41,23 @@ before_task :clean do
   system <<~Desc
     #{compose_cmd} down
   Desc
+end
+
+custom_commands do
+  desc 'conf', 'list dynamic nginx config'
+  def conf
+    system <<~Desc
+      docker exec #{ops_container} cat /etc/nginx/conf.d/default.conf
+    Desc
+  end
+
+  desc 'alog', 'nginx access log'
+  def alog
+    # access.log -> /dev/stdout
+    system <<~Desc
+      docker exec #{ops_container} tail -f /var/log/nginx/access.log
+    Desc
+  end
 end
 
 let_cli_magic_start! # make dockerize fun with ruby 

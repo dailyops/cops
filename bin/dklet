@@ -1,0 +1,37 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  Base dklet settings and commands
+Note
+
+register_net 'dailyops' # as default user network
+register :vol_root, '/Volumes/docker' # Mac tested
+
+task :main, preclean: false do
+  puts "Welcome to dklet"
+  invoke :help
+end
+
+custom_commands do
+  desc 'init', 'init dklet'
+  def init
+    invoke :netup, [], {}
+
+    system <<~Desc
+      # ensure global volumes root exists
+      sudo mkdir -p #{fetch(:vol_root)}
+    Desc
+
+    puts "dknet ready to fly with you!"
+  end
+
+  desc 'config', 'show config info'
+  def conf
+    puts "==dklet preferences"
+    info = {
+      net: netname
+    }
+    puts info
+  end
+end
+
+let_cli_magic_start! # make dockerize fun with ruby 

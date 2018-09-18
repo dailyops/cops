@@ -10,23 +10,19 @@ Note
 # user/passwd: admin/portainer
 register_docker_image 'portainer/portainer'
 register :vol_root, "/Volumes/docker"
-register_net
+register_net 'dailyops'
 
 #https://portainer.readthedocs.io/en/stable/deployment.html#quick-start
 task :main do
   invoke :netup, [], {}
+
   system <<~Desc
-    #docker volume create portainer_data
     docker run -d -p 9000:9000 \
       --net #{netname} --name portainer --restart always \
+      -e VIRTUAL_HOST=portainer.lh,p.lh \
       -v /var/run/docker.sock:/var/run/docker.sock \
       -v #{fetch(:vol_root)}/portainer:/data #{docker_image}
-    open http://localhost:9000
-  Desc
-end
-
-task :clean do
-  system <<~Desc
+    #open http://localhost:9000
   Desc
 end
 
