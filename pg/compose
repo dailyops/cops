@@ -1,5 +1,4 @@
 #!/usr/bin/env rundklet
-
 write_dockerfile <<~Desc
   FROM postgres:9.6-alpine
   LABEL maintainer=dailyops
@@ -49,7 +48,7 @@ Desc
 #docker stack deploy -c stack.yml postgres
 task :main do
   system <<~Desc
-    docker-compose -f #{specfile} up -d
+    #{compose_cmd} up -d
     sleep 3 # wait for initdb complete
     open http://localhost:8080/?pgsql=db&username=postgres
   Desc
@@ -57,7 +56,7 @@ end
 
 before_task :clean do
   system <<~Desc
-    docker-compose -f #{specfile} down --volumes
+    #{compose_cmd} down --volumes
   Desc
 end
 

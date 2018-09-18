@@ -22,22 +22,17 @@ write_specfile <<~Desc
       image: jwilder/whoami
       environment:
         - VIRTUAL_HOST=whoami.lh
-  networks:
-    default: 
-    #default:
-      #external:
-        #name: dev-net
 Desc
 
 task :main do
   system <<~Desc
-    docker-compose -f #{specfile} up -d
+    #{compose_cmd} up -d
   Desc
 end
 
 before_task :clean do
   system <<~Desc
-    docker-compose -f #{specfile} down
+    #{compose_cmd} down
   Desc
 end
 

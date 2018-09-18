@@ -14,7 +14,6 @@ Desc
 task :main do
   system <<~Desc
     # docker run --rm #{docker_image} echo xxx in container shell
-    # docker-compose -f #{specfile} up -d
   Desc
 end
 

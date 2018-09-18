@@ -51,6 +51,12 @@ module DockDSL
     dklet_script.realdirpath.dirname
   end
 
+  def script_name
+    name = dklet_script.basename('.rb').to_s
+    return name unless name == 'dklet'
+    "#{script_path.basename.to_s}_dklet"
+  end
+
   def dklet_script
     Pathname($PROGRAM_NAME)
   end
@@ -191,6 +197,19 @@ module DockDSL
     end
     netid
   end
+
+  ## project name for docker-compose
+  def compose_name
+    cname = fetch(:compose_name)
+    return cname if cname
+    script_name
+  end
+
+  # -f, --file
+  # -p, --project-name to altertive project name, eg. default net prefix
+  def compose_cmd
+    "docker-compose -f #{specfile} --project-name #{compose_name} --project-directory #{script_path}"
+  end 
 end
 
 module Util
