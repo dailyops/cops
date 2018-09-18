@@ -3,7 +3,7 @@ gemfile do
   source ENV['GEM_SOURCE'] || 'https://rubygems.org'
   gem "byebug"
   gem "thor"
-  gem 'method_source'
+  #gem 'method_source' # not used now
 end
 
 require 'tempfile'
@@ -171,6 +171,25 @@ module DockDSL
   def user_notes
     fetch(:user_notes)
   end
+
+  # docker networking
+  def netname
+    fetch(:netname)
+  end
+
+  def register_net(name = :default, build: false)
+    register :netname, name
+    build_docker_net(name) if build
+  end
+
+  def build_docker_net(name, driver: :bridge)
+    cmd = "docker network ls --filter name=#{name} -q"
+    netid = `#{cmd}`
+    if netid.length < 1
+      netid = `docker network create #{name} --driver=#{driver}`
+    end
+    netid
+  end
 end
 
 module Util
@@ -319,6 +338,26 @@ class DockletCLI < Thor
     system <<~Desc
       docker ps -f ancestor=#{docker_image} -a
     Desc
+  end
+
+  desc 'netup NAME', 'make networking'
+  def netup(name = netname)
+    return unless name
+    build_docker_net(name)
+    puts "network #{name} working"
+  end
+
+  desc 'netdown NAME', 'clean networking'
+  option :force, type: :boolean, default: false, banner: 'rm forcely'
+  def netdown(name = netname)
+    return unless name
+    global_nets = %i(global default)
+    if global_nets.include?(name.to_sym)
+      puts "donot clean global net: #{name}" if options[:debug]
+      return
+    end
+    system "docker network rm #{name}"
+    puts "network #{name} cleaned"
   end
 
   no_commands do

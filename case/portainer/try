@@ -1,0 +1,44 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  manage docker host or swarm using web UI
+  https://github.com/portainer/portainer
+  https://portainer.io/install.html
+  https://github.com/portainer/portainer-compose
+  https://portainer.readthedocs.io/en/latest/deployment.html#secure-portainer-using-ssl
+Note
+
+# user/passwd: admin/portainer
+register :vol_root, "/Volumes/docker"
+register_docker_image 'portainer/portainer'
+
+task :main do
+  #https://portainer.readthedocs.io/en/stable/deployment.html#quick-start
+  system <<~Desc
+    docker volume create portainer_data
+    docker run -d -p 9000:9000 --name portainer --restart always \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      -v #{fetch(:vol_root)}/portainer:/data #{docker_image}
+    open http://localhost:9000
+  Desc
+end
+
+task :clean do
+  system <<~Desc
+    docker volume rm portainer_data
+  Desc
+end
+
+let_cli_magic_start! # make dockerize fun with ruby 
+
+#write_specfile <<~Desc
+  #version: '2'
+  #services:
+    #portainer:
+      #image: portainer/portainer
+      #command: -H unix:///var/run/docker.sock
+      #volumes:
+        #- /var/run/docker.sock:/var/run/docker.sock
+        #- portainer_data:/data
+  #volumes:
+    #portainer_data:
+#Desc

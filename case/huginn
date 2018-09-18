@@ -1,0 +1,21 @@
+#!/usr/bin/env rundklet
+
+add_note <<~Note
+  https://github.com/huginn/huginn
+Note
+
+# https://docs.docker.com/develop/develop-images/dockerfile_best-practices
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL maintainer=dailyops
+  #CMD sh
+Desc
+
+task :main do
+  system <<~Desc
+    # docker run --rm #{docker_image} echo xxx in container shell
+    # docker-compose -f #{specfile} up -d
+  Desc
+end
+
+let_cli_magic_start! # make dockerize fun with ruby 

@@ -232,3 +232,6 @@ function dkgcr(){
 # minikube start --help
 
 # docker volume create pgdata
+
+return 0
+prefer system location on mac /Volumes/docker

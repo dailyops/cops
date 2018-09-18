@@ -1,0 +1,12 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  make quick note here
+Note
+
+task :main do
+  system <<~Desc
+    pgweb --bind 0.0.0.0 --listen 8081 --auth-user pgweb --auth-pass=pgweb --ssl=disable --skip-open --db xxx_pg_url
+  Desc
+end
+
+let_cli_magic_start! # make dockerize fun with ruby 

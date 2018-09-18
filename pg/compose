@@ -31,6 +31,17 @@ write_specfile <<~Desc
       restart: always
       ports:
         - 8080:8080
+    #pgweb:
+      #image: sosedoff/pgweb
+      #container_name: pgweb
+      #restart: always
+      #expose:
+        #- "8081"
+      #environment:
+        #- DATABASE_URL=postgres://postgres@db:5432/postgres
+        ##- PGWEB_PORT=8081
+        ##- PGWEB_USER=pgweb
+        ##- PGWEB_PASS=pgweb
 Desc
 
 #docker-compose -f stack.yml up

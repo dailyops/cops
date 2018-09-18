@@ -1,0 +1,34 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  docker registry for image
+  https://docs.docker.com/registry/deploying/
+
+  ## usage
+  docker tag ubuntu localhost:5000/ubuntu
+  docker push localhost:5000/ubuntu
+
+  ## resources
+  https://github.com/cesanta/docker_auth
+  https://github.com/jessfraz/reg
+  https://github.com/mayflower/docker-ls
+  https://github.com/snagles/docker-registry-manager
+
+  https://github.com/vmware/harbor
+  https://github.com/SUSE/Portus
+  http://port.us.org/docs/first-steps.html
+  https://hub.docker.com/r/opensuse/portus/
+  https://github.com/Evedel/bow
+
+  mirror cache
+  https://docs.docker.com/registry/recipes/mirror/
+  https://docs.docker.com/registry/configuration/#proxy
+Note
+
+task :main do
+  system <<~Desc
+    # docker run --rm #{docker_image} echo xxx in container shell
+    # docker-compose -f #{specfile} up -d
+  Desc
+end
+
+let_cli_magic_start! # make dockerize fun with ruby 
