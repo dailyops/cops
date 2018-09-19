@@ -23,7 +23,11 @@ module DockDSL
   end
 
   def fetch(key)
-    registry[key]
+    val = registry[key]
+    if val && val.respond_to?(:call)
+      val = val.call
+    end
+    val
   end
 
   def register_docker_image(name, for_which: nil)
@@ -111,7 +115,7 @@ module DockDSL
     # ADD xxx
     # COPY xxx
     need_path = body =~ /^\s*(ADD|COPY)\s/i
-    return script_path if need_path
+    return approot if need_path
   end
 
   def norm_dockerfile_key(name = nil)
@@ -208,7 +212,7 @@ module DockDSL
   # -f, --file
   # -p, --project-name to altertive project name, eg. default net prefix
   def compose_cmd
-    "docker-compose -f #{specfile} --project-name #{compose_name} --project-directory #{script_path}"
+    "docker-compose -f #{specfile} --project-name #{compose_name} --project-directory #{approot}"
   end 
 
   def register_ops(cid)
@@ -217,6 +221,19 @@ module DockDSL
 
   def ops_container
     fetch(:ops_container)
+  end
+
+  def approot
+    fetch(:approot) || script_path
+  end
+
+  def register_root path
+    path = Pathname(path) unless path.is_a?(Pathname)
+    register :approot, path
+  end
+
+  def appname
+    fetch(:appname) || approot.basename.to_s
   end
 end
 
