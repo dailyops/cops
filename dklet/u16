@@ -18,4 +18,3 @@ write_dockerfile <<~Desc
   CMD bash
 Desc
 
-let_cli_magic_start!

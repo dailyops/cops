@@ -16,6 +16,7 @@ write_specfile <<~Desc
 Desc
 
 task :main do
+  # create a default net
   system <<~Desc
     #{compose_cmd} up -d
     #{compose_cmd} exec ops wget -O- web
@@ -28,4 +29,3 @@ before_task :clean do
   Desc
 end
 
-let_cli_magic_start! # make dockerize fun with ruby 

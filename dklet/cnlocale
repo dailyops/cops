@@ -21,4 +21,3 @@ add_note <<~Note
   make quick note here
 Note
 
-let_cli_magic_start! # make dockerize fun with ruby 

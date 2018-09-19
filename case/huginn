@@ -16,5 +16,3 @@ task :main do
     # docker run --rm #{docker_image} echo xxx in container shell
   Desc
 end
-
-let_cli_magic_start! # make dockerize fun with ruby 

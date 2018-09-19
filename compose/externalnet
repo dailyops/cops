@@ -34,4 +34,3 @@ task :clean do
   invoke :netdown, [], {}
 end
 
-let_cli_magic_start! # make dockerize fun with ruby 

@@ -67,4 +67,3 @@ add_note <<~Note
   #or restart k8s
 Note
 
-let_cli_magic_start!

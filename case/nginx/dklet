@@ -49,5 +49,3 @@ add_note <<~Note
 
   nginx-debug
 Note
-
-let_cli_magic_start!

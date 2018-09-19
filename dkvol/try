@@ -1,0 +1,35 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  test docker volume
+  https://docs.docker.com/storage/volumes/
+  https://docs.docker.com/engine/reference/builder/#volume
+Note
+
+# https://docs.docker.com/develop/develop-images/dockerfile_best-practices
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL maintainer=dailyops
+  RUN mkdir /vol1 && echo hi volume at `date` built > /vol1/hi
+  VOLUME /vol1 /vol2/missing-dir1/sub-dir2
+  RUN echo write after volume declare >> /vol1/hi
+  RUN mkdir /vol3 && echo test > /vol3/test
+  VOLUME /vol3
+Desc
+
+task :main do
+  host_vol3 = script_path.parent.join('tmp/try-vol3')
+  system <<~Desc
+    # create missing dirs
+    docker run --rm #{docker_image} find /vol2
+    #/vol1/hi: missing content after volume declare 
+    #/vol3/test exists
+    docker run --rm #{docker_image} sh -c 'cat /vol1/hi; find /vol3'
+    docker run -d --name try-vol3 -v #{host_vol3}:/vol3 \
+      #{docker_image} ping localhost 
+    echo hi from host to vol3 > #{host_vol3}/hosthi
+    # /vol3/test missing after host mount!!! 
+    docker exec try-vol3 sh -c 'find /vol3; cat /vol3/hosthi'
+    docker rm -f try-vol3
+  Desc
+end
+

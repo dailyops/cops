@@ -38,4 +38,3 @@ custom_commands do
   end
 end
 
-let_cli_magic_start!

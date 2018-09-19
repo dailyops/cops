@@ -21,4 +21,3 @@ write_dockerfile <<~Desc
   CMD ["/usr/sbin/sshd", "-D"]
 Desc
 
-let_cli_magic_start!

@@ -26,7 +26,7 @@ task :main do
   Desc
 end
 
-let_cli_magic_start! # make dockerize fun with ruby 
+__END__
 
 #write_specfile <<~Desc
   #version: '2'

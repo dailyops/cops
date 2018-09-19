@@ -33,5 +33,3 @@ custom_commands do
     puts info
   end
 end
-
-let_cli_magic_start! # make dockerize fun with ruby 

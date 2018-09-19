@@ -34,5 +34,3 @@ add_note <<~Note
   * CMD should be used as a way of defining default arguments for an ENTRYPOINT command or for executing an ad-hoc command in a container.
   * CMD will be overridden when running the container with alternative arguments.
 Note
-
-let_cli_magic_start! # make dockerize fun with ruby 

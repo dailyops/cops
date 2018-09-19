@@ -53,4 +53,3 @@ add_note <<~Note
   https://github.com/kubernetes/kubernetes/issues/54870
 Note
 
-let_cli_magic_start!

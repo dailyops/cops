@@ -1,6 +1,6 @@
 #!/usr/bin/env rundklet
 
-require_relative 'shared_lib'
+require_relative 'shared'
 
 # https://docs.docker.com/engine/reference/builder/#usage
 # https://docs.docker.com/develop/develop-images/dockerfile_best-practices
@@ -19,4 +19,3 @@ add_note <<~Note
   make quick note here
 Note
 
-let_cli_magic_start! # make dockerize fun with ruby 

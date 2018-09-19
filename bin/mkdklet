@@ -35,5 +35,3 @@ task :main do
     # #{compose_cmd} up -d
   Desc
 end
-
-let_cli_magic_start! # make dockerize fun with ruby 

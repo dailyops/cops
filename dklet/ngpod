@@ -43,4 +43,3 @@ add_note <<~Note
   kubectl create -f ngpod.yml
 Note
 
-let_cli_magic_start!

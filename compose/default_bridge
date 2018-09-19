@@ -37,4 +37,3 @@ before_task :clean do
   Desc
 end
 
-let_cli_magic_start! # make dockerize fun with ruby 
