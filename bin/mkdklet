@@ -17,7 +17,6 @@ exec "#{ENV['EDITOR'] || 'vi'} #{rpath}" unless ENV['NOT_OPEN']
 
 __END__
 #!/usr/bin/env rundklet
-
 add_note <<~Note
   make quick note here
 Note

@@ -1,0 +1,64 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  try gemstash
+  https://github.com/bundler/gemstash
+  https://blog.javabien.net/2017/08/11/how-to-use-docker-and-gemstash-to-not-download-gems-over-and-over-again/
+Note
+
+register_net
+register :gemvol, "/Volumes/docker/gemstash"
+register :hostport, 19200
+register_ops 'gemstash'
+
+# https://docs.docker.com/develop/develop-images/dockerfile_best-practices
+write_dockerfile <<~Desc
+  FROM ruby:2.5-alpine3.7
+  LABEL maintainer=dailyops
+  RUN apk add build-base sqlite-dev && \
+      gem install --no-ri --no-rdoc gemstash
+  EXPOSE 9292
+  VOLUME /root/.gemstash
+  ENTRYPOINT ["gemstash"]
+  CMD ["start", "--no-daemonize"]
+Desc
+
+task :main do
+  invoke :netup, [], {}
+  system <<~Desc
+    docker run -d --name gemstash --net #{netname} -p #{fetch(:hostport)}:9292 \
+      -v #{fetch(:gemvol)}:/root/.gemstash \
+      -e VIRTUAL_HOST=gemstash.lh \
+      #{docker_image}
+  Desc
+end
+
+# todo list gems index in gemstash or web page
+custom_commands do
+  desc 'test', 'test gemstash server'
+  def test
+    dfile = ::Util.tmpfile_for <<~Desc
+      FROM ruby:2.5-alpine3.7
+      LABEL maintainer=dailyops
+      RUN apk add build-base && \
+          bundle config mirror.https://rubygems.org http://gemstash:9292
+
+      WORKDIR /tmp1
+      COPY Gemfile-test ./Gemfile
+      RUN bundle install --verbose
+    Desc
+    img = 'docklet/gemstash-test1:v0'
+    system <<~Desc
+      docker build -t #{img} --network #{netname} -f #{dfile} #{script_path}
+      docker rmi #{img}
+    Desc
+  end
+
+  desc 'ls', 'show volume data'
+  def ls
+    system <<~Desc
+      echo volume at: #{fetch(:gemvol)}
+      du -hs #{fetch(:gemvol)}
+      ls -l #{fetch(:gemvol)}
+    Desc
+  end
+end

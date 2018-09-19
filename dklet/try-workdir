@@ -1,0 +1,14 @@
+#!/usr/bin/env rundklet
+# https://docs.docker.com/develop/develop-images/dockerfile_best-practices
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL maintainer=dailyops
+  WORKDIR /tmp1/sub1/sub2
+Desc
+
+task :main do
+  # will create workdir
+  system <<~Desc
+    docker run --rm #{docker_image} find /tmp1
+  Desc
+end

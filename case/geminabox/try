@@ -1,0 +1,20 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  gem server
+  https://github.com/geminabox/geminabox
+  https://blog.packagecloud.io/eng/2015/05/27/host-mirror-private-gem-server/
+Note
+
+# https://docs.docker.com/develop/develop-images/dockerfile_best-practices
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL maintainer=dailyops
+  #CMD sh
+Desc
+
+task :main do
+  system <<~Desc
+    # docker run --rm #{docker_image} echo xxx in container shell
+    # #{compose_cmd} up -d
+  Desc
+end
