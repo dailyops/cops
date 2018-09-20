@@ -1,0 +1,34 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  test local gemstash server
+  https://blog.javabien.net/2017/08/11/how-to-use-docker-and-gemstash-to-not-download-gems-over-and-over-again/
+Note
+
+require_relative '../shared'
+register_docker_image 'docklet/gemstash-test:newest'
+register :build_net, netname
+
+# TODO ERB 
+write_dockerfile <<~Desc
+  FROM ruby:2.5-alpine3.7
+  LABEL maintainer=dailyops
+  WORKDIR /tmp1
+  RUN apk add build-base
+  RUN bundle config mirror.https://rubygems.org http://gemstash:9292
+  COPY Gemfile ./Gemfile
+  RUN bundle install --jobs=4 --retry=3 --verbose
+Desc
+
+task :main do
+  system <<~Desc
+    echo nothing...
+  Desc
+end
+
+__END__
+
+## How to speedup nokogiri, nearly 1 minute 
+Installing mini_portile2 2.3.0
+Fetching nokogiri 1.8.4
+Installing nokogiri 1.8.4 with native extensions
+Fetching rails-dom-testing 2.0.3

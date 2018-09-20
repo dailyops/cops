@@ -189,10 +189,10 @@ module DockDSL
 
   def register_net(name = :dailyops, build: false)
     register :netname, name
-    build_docker_net(name) if build
+    ensure_docker_net(name) if build
   end
 
-  def build_docker_net(name, driver: :bridge)
+  def ensure_docker_net(name, driver: :bridge)
     #cmd = "docker network ls --filter name=#{name} -q"
     cmd = "docker network ls --format '{{.Name}}' --filter name=#{name}"
     netid = `#{cmd}`.chomp
@@ -215,14 +215,6 @@ module DockDSL
     "docker-compose -f #{specfile} --project-name #{compose_name} --project-directory #{approot}"
   end 
 
-  def register_ops(cid)
-    register :ops_container, cid
-  end
-
-  def ops_container
-    fetch(:ops_container)
-  end
-
   def approot
     fetch(:approot) || script_path
   end
@@ -234,6 +226,26 @@ module DockDSL
 
   def appname
     fetch(:appname) || approot.basename.to_s
+  end
+
+  def containers_for_image(img = docker_image)
+    `docker ps -aq -f ancestor=#{img}`.split("\n")
+  end
+
+  def register_ops(cid)
+    register :ops_container, cid
+  end
+
+  def ops_container
+    fetch(:ops_container)
+  end
+
+  def smart_ops_container
+    ops_container || containers_for_image.first
+  end
+
+  def container_missing
+    puts "Not found container for image: #{docker_image}"
   end
 end
 
@@ -268,38 +280,42 @@ class DockletCLI < Thor
     invoke_clean if options[:clean]
   end
 
-  desc 'runsh', 'docker run eg. interactive sh'
-  option :cmd, banner: 'run command', default: 'sh'
-  option :opts, banner: 'run options'
-  def runsh
-    invoke :build, [], {}
-    #byebug
-    #puts "docker run --rm -it #{options[:opts]} #{docker_image} #{options[:cmd]}" if options[:debug]
-    system "docker run --rm -it #{options[:opts]} #{docker_image} #{options[:cmd]}"
-  end
-
   desc 'console', 'get ruby console'
   def console
     byebug
     puts 'finish' if options[:debug]
   end
 
-  desc 'into', 'go into a running container'
-  def into
-    if con = ops_container
-      system "docker exec -it #{con} sh"
+  desc 'log [CONTAINER]', 'logs in container'
+  def log(cid = smart_ops_container)
+    unless cid
+      container_missing
       return
     end
+    system <<~Desc
+      docker logs -t -f --details #{cid}
+    Desc
+  end
 
-    cids = `docker ps -aq -f ancestor=#{docker_image}`
-    if cids.length > 0
-      cid = cids.split("\n").first
-      puts "run sh in container: #{cid} of #{docker_image}"
-      system "docker exec -it #{cid} sh"
-    else
-      puts "No container for image #{docker_image}"
+  desc 'runsh [CONTAINER]', 'run into container'
+  option :cmd, banner: 'run command', default: 'sh'
+  option :opts, banner: 'run options'
+  option :allow_tmp, type: :boolean, default: true, banner: 'allow run tmp container'
+  def runsh(cid = smart_ops_container)
+    if cid
+      puts "run #{options[:cmd]} into container: #{cid}"
+      exec "docker exec -it #{cid} #{options[:cmd]}"
+    end
+
+    container_missing if options[:debug]
+
+    if options[:allow_tmp]
+      cmd = "docker run --rm -it #{options[:opts]} #{docker_image} #{options[:cmd]}"
+      puts "tmp run container by cmd: #{cmd}"
+      system cmd
     end
   end
+  map "sh" => :runsh
 
   desc 'daemon', 'docker run in daemon'
   option :opts, banner: 'run extra options'
@@ -309,13 +325,19 @@ class DockletCLI < Thor
   end
 
   desc 'build', 'build image'
+  option :opts, banner: 'run extra options'
   def build
     return unless dockerfile
     bpath = smart_build_context_path
+    cmd = "time docker build --tag #{docker_image}"
+    net = fetch(:build_net)
+    cmd += " --network #{net}" if net
+    cmd += " #{options[:opts]}" if options[:opts]
+
     cmd = if bpath
-      "docker build --tag #{docker_image} --file #{dockerfile} #{bpath}"
+      "#{cmd} --file #{dockerfile} #{bpath}"
     else # nil stand for do not need build context
-      "cat #{dockerfile} | docker build --tag #{docker_image} -"
+      "cat #{dockerfile} | #{cmd} -"
     end
     puts "build command:\n  #{cmd}" if options[:debug]
 
@@ -323,16 +345,6 @@ class DockletCLI < Thor
       invoke_hooks_for(:build, type: :before)
       system cmd 
     end
-  end
-
-  desc 'log [OPS_CONTAINER]', 'log container todo'
-  def log(cid = ops_container)
-    unless cid
-      abort "No container provided!"
-    end
-    system <<~Desc
-      docker logs -t -f --details #{cid}
-    Desc
   end
 
   desc 'note', 'display user notes'
@@ -343,14 +355,14 @@ class DockletCLI < Thor
   desc 'clean', 'clean image'
   def clean
     invoke_hooks_for(:clean, type: :before)
-    system <<~Desc
-      cids=$(docker ps -aq -f ancestor=#{docker_image})
-      if [ -n "$cids" ]; then
-        echo ==clean containers: $cids
-        # --volumes
-        docker rm --force $cids
-      fi
-    Desc
+    cids = containers_for_image
+    unless cids.empty?
+      str = cids.join(' ')
+      system <<~Desc
+        echo ==clean containers: #{str}
+        docker rm --force #{str}
+      Desc
+    end
     if dockerfile # user defined image
       system <<~Desc
         echo ==clean image: #{docker_image}
@@ -396,7 +408,7 @@ class DockletCLI < Thor
   desc 'netup NAME', 'make networking'
   def netup(name = netname)
     return unless name
-    build_docker_net(name)
+    ensure_docker_net(name)
     puts "network #{name} working"
   end
 
