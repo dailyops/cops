@@ -115,7 +115,7 @@ module DockDSL
     # ADD xxx
     # COPY xxx
     need_path = body =~ /^\s*(ADD|COPY)\s/i
-    return approot if need_path
+    return script_path if need_path
   end
 
   def norm_dockerfile_key(name = nil)
