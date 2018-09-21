@@ -24,6 +24,6 @@ case/pg/dklet    # try pg using dklet
 
 * [Rails on Docker & k8s](https://github.com/dailyops/hirails)
 
-### dns
+### DNS
 
-* [develop friendly dns](https://github.com/dailyops/devdns)
+* [develop friendly dns](https://github.com/dailyops/docker-devdns)
