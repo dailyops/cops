@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 require 'pathname'
+require 'erb'
 
 rbfile = ARGV[0]
 abort "rbfile required!" if rbfile.nil?
