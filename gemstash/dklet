@@ -40,6 +40,10 @@ custom_commands do
     Desc
   end
 
-  # todo list gems index in gemstash or web page
+  # TODO list gems index in gemstash or web page
 end
 
+__END__
+
+# Deploy
+https://github.com/bundler/gemstash/blob/master/docs/gemstash-deploy.7.md

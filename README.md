@@ -13,9 +13,9 @@
 * try some examples
 
 ```
-rake dklet:hi # a quick hi task
-dklet/try     # a dklet script
-pg/dklet      # try pg using dklet
+rake dklet:hi    # a quick hi task
+dklet/try        # a dklet script
+case/pg/dklet    # try pg using dklet
 ``` 
 
 ## Dockerize apps
@@ -23,3 +23,7 @@ pg/dklet      # try pg using dklet
 ### Rails app
 
 * [Rails on Docker & k8s](https://github.com/dailyops/hirails)
+
+### dns
+
+* [develop friendly dns](https://github.com/dailyops/devdns)

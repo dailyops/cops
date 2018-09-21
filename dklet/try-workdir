@@ -6,8 +6,8 @@ write_dockerfile <<~Desc
   WORKDIR /tmp1/sub1/sub2
 Desc
 
+# will create workdir
 task :main do
-  # will create workdir
   system <<~Desc
     docker run --rm #{docker_image} find /tmp1
   Desc

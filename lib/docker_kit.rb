@@ -329,7 +329,7 @@ class DockletCLI < Thor
   def build
     return unless dockerfile
     bpath = smart_build_context_path
-    cmd = "time docker build --tag #{docker_image}"
+    cmd = "docker build --tag #{docker_image}"
     net = fetch(:build_net)
     cmd += " --network #{net}" if net
     cmd += " #{options[:opts]}" if options[:opts]
@@ -366,7 +366,7 @@ class DockletCLI < Thor
     if dockerfile # user defined image
       system <<~Desc
         echo ==clean image: #{docker_image}
-        docker rmi --force #{docker_image}
+        docker rmi --force #{docker_image} 2>/dev/null
       Desc
     else
       puts 'no dockerfile provided' if options[:debug]
@@ -386,6 +386,11 @@ class DockletCLI < Thor
       puts File.read(dockerfile)
       #puts "# Dockerfile at #{dockerfile} "
     end
+  end
+
+  desc 'info', 'display dklet info in registry'
+  def info
+    pp registry
   end
 
   desc 'image_name', 'display image name'
