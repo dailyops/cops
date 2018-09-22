@@ -1,11 +1,5 @@
-require 'bundler/inline'
-gemfile do
-  source ENV['GEM_SOURCE'] || 'https://rubygems.org'
-  gem "byebug"
-  gem "thor"
-  #gem 'method_source' # not used now
-end
-
+require 'bundler/setup'
+Bundler.require :default
 require 'tempfile'
 require 'erb'
 
@@ -94,28 +88,11 @@ module DockDSL
   # Dockerfile for image build
   def write_dockerfile(str, name: nil, path: nil)
     set_file_for(norm_dockerfile_key(name), str)
-    use_build_path(path) if path
+    register_build_root(path) if path
   end
 
   def dockerfile(name=nil)
     fetch(norm_dockerfile_key(name))
-  end
-
-  def use_build_path(path)
-    return unless path
-    path = path.to_s if path.is_a?(Pathname)
-    register :user_build_path, path
-  end
-
-  def smart_build_context_path
-    key = :user_build_path
-    provided = fetch(key)
-    return provided if registry.has_key?(key)
-    body = File.read(dockerfile)
-    # ADD xxx
-    # COPY xxx
-    need_path = body =~ /^\s*(ADD|COPY)\s/i
-    return script_path if need_path
   end
 
   def norm_dockerfile_key(name = nil)
@@ -215,13 +192,34 @@ module DockDSL
     "docker-compose -f #{specfile} --project-name #{compose_name} --project-directory #{approot}"
   end 
 
-  def approot
-    fetch(:approot) || script_path
+  def register_approot path
+    register_path(:approot, path)
   end
 
-  def register_root path
+  def approot
+    fetch(:approot) || build_root
+  end
+
+  def smart_build_context_path
+    # use explicitly specified, maybe nil
+    return build_root if registry.has_key?(:build_root)
+    # check build path dependent
+    body = File.read(dockerfile)
+    need_path = body =~ /^\s*(ADD|COPY)\s/i
+    script_path if need_path
+  end
+
+  def register_build_root path
+    register_path(:build_root, path)
+  end
+
+  def build_root
+    fetch(:build_root) # || script_path
+  end
+
+  def register_path key, path
     path = Pathname(path) unless path.is_a?(Pathname)
-    register :approot, path
+    register key, path
   end
 
   def appname
@@ -328,12 +326,12 @@ class DockletCLI < Thor
   option :opts, banner: 'run extra options'
   def build
     return unless dockerfile
-    bpath = smart_build_context_path
     cmd = "docker build --tag #{docker_image}"
     net = fetch(:build_net)
     cmd += " --network #{net}" if net
     cmd += " #{options[:opts]}" if options[:opts]
 
+    bpath = smart_build_context_path
     cmd = if bpath
       "#{cmd} --file #{dockerfile} #{bpath}"
     else # nil stand for do not need build context

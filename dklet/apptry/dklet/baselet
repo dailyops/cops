@@ -1,0 +1,16 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  base dependant support dklets
+Note
+
+register_approot script_path.parent
+
+custom_commands do
+  def main
+    Dir.chdir(script_path) do
+      system <<~Desc
+        pkg1/dklet
+      Desc
+    end
+  end
+end

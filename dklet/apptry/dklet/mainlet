@@ -1,0 +1,27 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  try dklet app, this serve as a mainlet
+Note
+
+register_approot script_path.parent
+register_build_root approot
+register_docker_image "docklet/#{appname}:newest"
+
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL maintainer=dailyops
+  WORKDIR /tmp
+  COPY fileinapp .
+Desc
+
+task :main do
+  system <<~Desc
+    docker run --rm #{docker_image} sh -c 'pwd; ls -al'
+  Desc
+
+  puts <<~Desc
+    appname: #{appname}
+    approot: #{approot}
+    build_root: #{build_root}
+  Desc
+end

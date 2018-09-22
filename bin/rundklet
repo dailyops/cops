@@ -3,6 +3,7 @@ require_relative '../lib/docker_kit'
 
 file = ARGV[0]
 abort "Error: require docklet file!" unless file
+
 $PROGRAM_NAME = file
 ARGV.shift
 load file
