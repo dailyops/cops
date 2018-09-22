@@ -217,6 +217,14 @@ module DockDSL
     fetch(:build_root) # || script_path
   end
 
+  def register_build_net net
+    register(:build_net, net)
+  end
+
+  def build_net
+    fetch(:build_net)
+  end
+
   def register_path key, path
     path = Pathname(path) unless path.is_a?(Pathname)
     register key, path
@@ -296,21 +304,32 @@ class DockletCLI < Thor
   end
 
   desc 'runsh [CONTAINER]', 'run into container'
-  option :cmd, banner: 'run command', default: 'sh'
-  option :opts, banner: 'run options'
+  option :cmd, banner: 'run command in container'
+  option :opts, banner: 'docker run options'
+  option :exec, type: :boolean, default: true, banner: 'first exec existed container'
   option :allow_tmp, type: :boolean, default: true, banner: 'allow run tmp container'
   def runsh(cid = smart_ops_container)
-    if cid
-      puts "run #{options[:cmd]} into container: #{cid}"
-      exec "docker exec -it #{cid} #{options[:cmd]}"
+    cmd = options[:cmd]
+    if !cmd && respond_to?(:default_container_cmd)
+      cmd = send(:default_container_cmd)
+    end
+    cmd ||=  'sh'
+    if cid && options[:exec]
+      dkcmd = "docker exec -it"
+      dkcmd += " #{options[:opts]}" if options[:opts]
+      dkcmd += " #{cid} #{cmd}"
+      puts "run : #{dkcmd}"
+      system dkcmd unless options[:dry]
+      return
     end
 
-    container_missing if options[:debug]
-
     if options[:allow_tmp]
-      cmd = "docker run --rm -it #{options[:opts]} #{docker_image} #{options[:cmd]}"
-      puts "tmp run container by cmd: #{cmd}"
-      system cmd
+      dkcmd = "docker run --rm -it"
+      dkcmd += " --network #{netname}" if netname
+      dkcmd += " #{options[:opts]}" if options[:opts]
+      dkcmd += " #{docker_image} #{cmd}"
+      puts "run: #{dkcmd}"
+      system dkcmd unless options[:dry]
     end
   end
   map "sh" => :runsh
@@ -327,7 +346,7 @@ class DockletCLI < Thor
   def build
     return unless dockerfile
     cmd = "docker build --tag #{docker_image}"
-    net = fetch(:build_net)
+    net = build_net
     cmd += " --network #{net}" if net
     cmd += " #{options[:opts]}" if options[:opts]
 
