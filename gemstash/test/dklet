@@ -1,20 +1,20 @@
 #!/usr/bin/env rundklet
 add_note <<~Note
-  test local gemstash server
+  test gemstash server
   https://blog.javabien.net/2017/08/11/how-to-use-docker-and-gemstash-to-not-download-gems-over-and-over-again/
 Note
 
 require_relative '../shared'
-register_docker_image 'docklet/gemstash-test:newest'
-register :build_net, netname
+register_docker_image "docklet/#{fetch(:service)}-test:newest"
+register_build_net netname
 
-# TODO ERB 
 write_dockerfile <<~Desc
   FROM ruby:2.5-alpine3.7
   LABEL maintainer=dailyops
   WORKDIR /tmp1
   RUN apk add build-base
-  RUN bundle config mirror.https://rubygems.org http://gemstash:9292
+  #RUN bundle config mirror.https://rubygems.org.fallback_timeout 3
+  RUN bundle config mirror.https://rubygems.org #{fetch(:service_url)}
   COPY Gemfile ./Gemfile
   RUN bundle install --jobs=4 --retry=3 --verbose
 Desc

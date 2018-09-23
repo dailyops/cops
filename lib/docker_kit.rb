@@ -197,7 +197,7 @@ module DockDSL
   end
 
   def approot
-    fetch(:approot) || build_root
+    fetch(:approot) || build_root || script_path
   end
 
   def smart_build_context_path
@@ -214,7 +214,7 @@ module DockDSL
   end
 
   def build_root
-    fetch(:build_root) # || script_path
+    fetch(:build_root)
   end
 
   def register_build_net net
@@ -374,21 +374,25 @@ class DockletCLI < Thor
     invoke_hooks_for(:clean, type: :before)
     cids = containers_for_image
     unless cids.empty?
-      str = cids.join(' ')
+      str_ids = cids.join(' ')
       system <<~Desc
-        echo ==clean containers: #{str}
-        docker rm --force #{str}
+        echo ==clean containers: #{str_ids}
+        docker rm --force #{str_ids}
       Desc
     end
+    invoke_hooks_for(:clean)
+  end
+
+  desc 'clean_image', 'clean user defined docker image'
+  def clean_image
     if dockerfile # user defined image
       system <<~Desc
         echo ==clean image: #{docker_image}
         docker rmi --force #{docker_image} 2>/dev/null
       Desc
     else
-      puts 'no dockerfile provided' if options[:debug]
+      puts 'no dockerfile provided'
     end
-    invoke_hooks_for(:clean)
   end
 
   desc 'spec', 'display specs'
