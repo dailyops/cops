@@ -15,7 +15,10 @@ dk(){
 alias dki='docker images -a'
 alias dkps="docker ps -a"
 alias dkpl='docker pull'
-alias dku="docker run --rm -ti ubuntu bash"
+#alias dku="docker run --rm -ti ubuntu bash"
+dku(){
+  ~/dev/dailyops/kc/dklet/ubuntu1804 sh 
+}
 #/bin/bash -c "while true; do date; sleep 6; done"
 # moby
 alias busybox="docker run --rm -it busybox"

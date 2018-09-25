@@ -1,0 +1,36 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  try multi-staging building
+  https://docs.docker.com/develop/develop-images/multistage-build/#use-multi-stage-builds
+Note
+
+register :appname, 'multistage'
+register_docker_image "docklet/#{appname}-try:newest"
+register :base_image, "docklet/#{appname}-try:base"
+
+write_dockerfile <<~Desc
+  FROM alpine:3.7 as base
+  LABEL maintainer=dailyops
+  WORKDIR /tmp1
+  RUN echo hi from base > hibase
+
+  FROM alpine:3.7 as test1
+  WORKDIR /tmp2
+  COPY --from=base /tmp1/hibase .
+  #COPY --from=nginx:latest /etc/nginx/nginx.conf /nginx.conf
+  RUN echo hi from test1 >> hibase
+Desc
+
+task :main do
+  system <<~Desc
+    docker build --target base -t #{fetch(:base_image)} -f #{dockerfile} #{approot}
+    docker run --rm #{fetch(:base_image)} cat /tmp1/hibase 
+    docker run --rm #{docker_image} cat /tmp2/hibase
+  Desc
+end
+
+task :clean do
+  system <<~Desc
+    docker rmi #{fetch(:base_image)}
+  Desc
+end

@@ -275,15 +275,12 @@ class DockletCLI < Thor
   desc 'main', 'main user entry'
   option :preclean, type: :boolean, default: true, banner: 'clean before do anything'
   option :build, type: :boolean, default: true, banner: 'build image'
-  option :clean, type: :boolean, default: false, banner: 'clean image'
   def main
     invoke_clean if options[:preclean] && task_opts(:main)[:preclean] != false
 
     invoke_hooks_for(:main, type: :before)
     invoke :build, [], {} if options[:build] && task_opts(:main)[:build] != false
     invoke_hooks_for(:main)
-
-    invoke_clean if options[:clean]
   end
 
   desc 'console', 'get ruby console'
@@ -345,6 +342,11 @@ class DockletCLI < Thor
   option :opts, banner: 'run extra options'
   def build
     return unless dockerfile
+
+    unless options[:dry]
+      invoke_hooks_for(:build, type: :before)
+    end
+
     cmd = "docker build --tag #{docker_image}"
     net = build_net
     cmd += " --network #{net}" if net
@@ -359,7 +361,6 @@ class DockletCLI < Thor
     puts "build command:\n  #{cmd}" if options[:debug]
 
     unless options[:dry]
-      invoke_hooks_for(:build, type: :before)
       system cmd 
     end
   end
@@ -369,9 +370,12 @@ class DockletCLI < Thor
     puts user_notes.join("\n")
   end
 
-  desc 'clean', 'clean image'
+  desc 'clean', 'clean container artifacts'
+  # keep cache reused
+  option :image, type: :boolean, default: false, banner: 'clean user-derived images'
   def clean
     invoke_hooks_for(:clean, type: :before)
+
     cids = containers_for_image
     unless cids.empty?
       str_ids = cids.join(' ')
@@ -380,18 +384,14 @@ class DockletCLI < Thor
         docker rm --force #{str_ids}
       Desc
     end
-    invoke_hooks_for(:clean)
-  end
 
-  desc 'clean_image', 'clean user defined docker image'
-  def clean_image
-    if dockerfile # user defined image
+    invoke_hooks_for(:clean)
+
+    if options[:image] && dockerfile
       system <<~Desc
         echo ==clean image: #{docker_image}
         docker rmi --force #{docker_image} 2>/dev/null
       Desc
-    else
-      puts 'no dockerfile provided'
     end
   end
 
@@ -401,11 +401,11 @@ class DockletCLI < Thor
   def spec
     if options[:spec] && specfile
       puts File.read(specfile)
-      #puts "# rendered at #{specfile}"
+      puts "# rendered at #{specfile}" if options[:debug]
     end
     if options[:dockerfile] && dockerfile
       puts File.read(dockerfile)
-      #puts "# Dockerfile at #{dockerfile} "
+      puts "# Dockerfile at #{dockerfile} " if options[:debug]
     end
   end
 

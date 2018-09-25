@@ -10,5 +10,10 @@ Desc
 task :main do
   system <<~Desc
     docker run --rm #{docker_image} find /tmp1
+    #{dklet_script} clean --image
+    #{dklet_script} image
   Desc
+
+  # TODO
+  #invoke :clean, [], {image: true}
 end

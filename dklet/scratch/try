@@ -1,0 +1,35 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  try scratch
+  https://docs.docker.com/develop/develop-images/baseimages/#more-resources
+Note
+
+register :hello_repo, script_path.join('../../local/hello-world') 
+
+write_dockerfile <<~Desc
+  FROM scratch
+  LABEL maintainer=dailyops
+  ADD hello /
+  CMD ["/hello"]
+Desc
+
+before_task :build do
+  hello_repo = fetch(:hello_repo)
+  system <<~Desc
+    mkdir -p #{hello_repo.parent}
+    if [ ! -d #{hello_repo} ];then
+      git clone https://github.com/docker-library/hello-world.git #{hello_repo}
+    fi
+    if [ ! -e #{hello_repo}/hello ];then
+      docker run --rm -it -v #{hello_repo}:/build ubuntu:16.04 bash -c "`cat #{script_path.join('build.sh')}`"
+    fi
+    cp --force #{hello_repo}/hello #{script_path}/hello
+  Desc
+end
+
+task :main do
+  system <<~Desc
+    docker run --rm #{docker_image}
+    rm #{script_path}/hello 
+  Desc
+end

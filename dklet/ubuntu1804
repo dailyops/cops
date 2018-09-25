@@ -1,0 +1,16 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  try ubuntu 18.04
+  https://hub.docker.com/_/ubuntu/
+Note
+
+write_dockerfile <<~Desc
+  FROM ubuntu:18.04
+  LABEL maintainer=dailyops
+Desc
+
+task :main do
+  system <<~Desc
+    docker run --rm #{docker_image} cat /etc/issue
+  Desc
+end

@@ -1,23 +1,37 @@
-#!/usr/bin/env ruby
-require_relative '../lib/docker_kit.rb'
+#!/usr/bin/env rundklet
+add_note <<~Note
+  try ssh on ubuntu
+  https://hub.docker.com/_/ubuntu/
+
+  # SSH login fix. Otherwise user is kicked off after login
+  RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+  ENV NOTVISIBLE "in users profile"
+  RUN echo "export VISIBLE=now" >> /etc/profile
+
+  apt install -y sshpass #use password auth in cli
+Note
+
+register_ops "sshtest"
 
 write_dockerfile <<~Desc
-  FROM ubuntu:16.04
-  MAINTAINER Cao Ruijian <cao7113@hotmail.com>
+  FROM ubuntu:18.04
+  LABEL maintainer=dailyops
 
-  RUN apt-get -y update 
-  RUN apt-get install -y openssh-server && \
+  RUN apt-get -y update && \
+      apt-get install -y openssh-server && \
       mkdir /var/run/sshd && \
-      echo 'root:root' | chpasswd && \
-      sed -ri 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
-      sed -ri 's/UsePAM yes/#UsePAM yes/g' /etc/ssh/sshd_config
-
-  ## SSH login fix. Otherwise user is kicked off after login
-  #RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
-  #ENV NOTVISIBLE "in users profile"
-  #RUN echo "export VISIBLE=now" >> /etc/profile
+      echo 'root:root' | chpasswd
+  #RUN sed -ri 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+      #sed -ri 's/UsePAM yes/#UsePAM yes/g' /etc/ssh/sshd_config
+  RUN echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
 
   EXPOSE 22
   CMD ["/usr/sbin/sshd", "-D"]
 Desc
 
+task :main do
+  system <<~Desc
+    docker run -d --name #{ops_container} -p 8022:22 #{docker_image}
+    echo "ssh -p 8022 root@ssh.server.test.lh # with password: root"
+  Desc
+end
