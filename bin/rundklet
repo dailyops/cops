@@ -8,4 +8,10 @@ $PROGRAM_NAME = file
 ARGV.shift
 load file
 
+# load tag-specific features, eg. rails_web
+app_tags.each do |atag|
+  #puts "==loading #{atag}"
+  require_relative "../app_tags/#{atag}"
+end
+
 let_cli_magic_start! # make dockerize fun with ruby 

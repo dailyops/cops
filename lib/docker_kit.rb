@@ -200,6 +200,14 @@ module DockDSL
     fetch(:approot) || build_root || script_path
   end
 
+  def register_app_tag(tag)
+    app_tags << tag
+  end
+
+  def app_tags
+    registry[:app_tags] ||= []
+  end
+
   def smart_build_context_path
     # use explicitly specified, maybe nil
     return build_root if registry.has_key?(:build_root)
