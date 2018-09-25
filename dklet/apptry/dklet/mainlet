@@ -3,7 +3,7 @@ add_note <<~Note
   try dklet app, this serve as a mainlet
 Note
 
-register_approot script_path.parent
+register_approot script_path.join('..')
 register_build_root approot
 register_docker_image "docklet/#{appname}:newest"
 

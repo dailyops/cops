@@ -35,11 +35,6 @@ dksyslog(){
   # journal -f -u docker
 }
 
-function dkenv(){
-  img=${1:-alpine}
-  docker run --rm -it $img env
-}
-
 # 容器网络ip
 function dkip(){
   docker inspect --format='{{.NetworkSettings.IPAddress}}' $*

@@ -17,7 +17,7 @@ write_dockerfile <<~Desc
 Desc
 
 task :main do
-  host_vol3 = script_path.parent.join('tmp/try-vol3')
+  host_vol3 = script_path.join('../tmp/try-vol3')
   system <<~Desc
     # create missing dirs
     docker run --rm #{docker_image} find /vol2

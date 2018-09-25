@@ -16,7 +16,7 @@ Desc
 before_task :build do
   hello_repo = fetch(:hello_repo)
   system <<~Desc
-    mkdir -p #{hello_repo.parent}
+    mkdir -p #{hello_repo.join('..')}
     if [ ! -d #{hello_repo} ];then
       git clone https://github.com/docker-library/hello-world.git #{hello_repo}
     fi
