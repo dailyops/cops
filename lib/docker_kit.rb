@@ -255,12 +255,12 @@ module DockDSL
     puts "Not found container for image: #{docker_image}"
   end
 
-  def register_env(str)
-    register :env, str
+  def register_default_env(str)
+    register :default_env, str
   end
 
   def env
-    ENV['APP_ENV'] || fetch(:env)
+    ENV['APP_ENV'] || fetch(:default_env)
   end
 end
 
@@ -458,6 +458,35 @@ class DockletCLI < Thor
     end
     system "docker network rm #{name}"
     puts "network #{name} cleaned"
+  end
+
+  desc 'envrun [args]', 'deploy app'
+  option :env, banner: "run app env"
+  def envrun(*args)
+    denv = options[:env] || env
+    denv = case denv
+      when 'dev'
+        'development'
+      when 'prod'
+        'production'
+      else
+        denv
+      end
+    # fix env bad design 
+    cmd = "APP_ENV=#{denv} #{dklet_script} #{args.join(' ')}"
+    puts cmd 
+    unless options[:dry]
+      system cmd
+    end
+  end
+
+  desc 'comprun', 'compose run'
+  def comprun(*args)
+    cmd <<~Desc
+      #{compose_cmd} #{args.join(' ')}
+    Desc
+    puts cmd
+    system cmd unless options[:dry]
   end
 
   no_commands do
