@@ -20,7 +20,7 @@ exec "#{ENV['EDITOR'] || 'vi'} #{rpath}" unless ENV['NOT_OPEN']
 __END__
 #!/usr/bin/env rundklet
 add_note <<~Note
-  make note here
+  
 Note
 
 # https://docs.docker.com/develop/develop-images/dockerfile_best-practices
@@ -31,7 +31,7 @@ Desc
 
 task :main do
   system <<~Desc
-    docker run --rm #{docker_image} echo hi from container with dklet in #{script_path}
+    docker run --rm #{docker_image} echo hi container from #{docker_image} image
     # #{compose_cmd} up -d
   Desc
 end

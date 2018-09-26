@@ -3,6 +3,9 @@ add_note <<~Note
   Automated nginx proxy for Docker containers using docker-gen
   https://github.com/jwilder/nginx-proxy
   https://hub.docker.com/r/jwilder/nginx-proxy/
+
+  TODO
+  https://github.com/JrCs/docker-letsencrypt-nginx-proxy-companion
 Note
 
 register_net

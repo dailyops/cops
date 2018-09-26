@@ -1,5 +1,6 @@
 require 'bundler/setup'
 Bundler.require :default
+require 'byebug'
 require 'tempfile'
 require 'erb'
 
@@ -24,24 +25,19 @@ module DockDSL
     val
   end
 
-  def register_docker_image(name, for_which: nil)
-    register norm_docker_image_key(for_which), name
+  def register_docker_image(name)
+    register :docker_image, name
   end
 
-  def docker_image(for_which = nil)
-    provided = fetch(norm_docker_image_key(for_which))
+  def docker_image
+    provided = fetch(:docker_image)
     return provided if provided
     imgname = dklet_script.basename('.rb').to_s
-    if imgname == 'dklet' # default name
+    if %w(dklet try).include?(imgname)
       imgname = script_path.basename.to_s
     end
     # NOTE: avoid use latest tag
     "docklet/#{imgname}:newest"
-  end
-
-  def norm_docker_image_key(which=nil)
-    return :docker_image unless which
-    "docker_image_for_#{which}".to_sym
   end
 
   # 触发脚本所在目录
@@ -86,32 +82,31 @@ module DockDSL
   end
 
   # Dockerfile for image build
-  def write_dockerfile(str, name: nil, path: nil)
-    set_file_for(norm_dockerfile_key(name), str)
+  def write_dockerfile(str, path: nil)
+    set_file_for(:dockerfile, str)
     register_build_root(path) if path
   end
 
-  def dockerfile(name=nil)
-    fetch(norm_dockerfile_key(name))
+  def raw_dockerfile
+    fetch(:dockerfile)
   end
 
-  def norm_dockerfile_key(name = nil)
-    return :dockerfile unless name
-    "dockerfile_for_#{name}".to_sym
+  def dockerfile
+    rendered_file_for(:dockerfile)
   end
 
   # specfile for k8s resources spec manifest
-  def write_specfile(str, name: nil)
-    set_file_for(norm_specfile_key(name), str)
+  def write_specfile(str)
+    set_file_for(:specfile, str)
   end
 
-  def raw_specfile(name=nil)
-    fetch(norm_specfile_key(name))
+  def raw_specfile
+    fetch(:specfile)
   end
 
-  def norm_specfile_key(name = nil)
-    return :specfile unless name
-    "specfile_for_#{name}".to_sym
+  ## rendered in current context
+  def specfile
+    rendered_file_for(:specfile)
   end
 
   def disable(key)
@@ -181,9 +176,7 @@ module DockDSL
 
   ## project name for docker-compose
   def compose_name
-    cname = fetch(:compose_name)
-    return cname if cname
-    script_name
+    "#{fetch(:compose_name) || script_name}-#{env}"
   end
 
   # -f, --file
@@ -260,6 +253,14 @@ module DockDSL
 
   def container_missing
     puts "Not found container for image: #{docker_image}"
+  end
+
+  def register_env(str)
+    register :env, str
+  end
+
+  def env
+    ENV['APP_ENV'] || fetch(:env)
   end
 end
 
@@ -475,11 +476,6 @@ class DockletCLI < Thor
           instance_eval &hook if hook.respond_to?(:call)
         end
       end
-    end
-
-    ## rendered in current context
-    def specfile
-      rendered_file_for(:specfile)
     end
   end
 end

@@ -8,9 +8,9 @@ add_note <<~Note
 Note
 
 # user/passwd: admin/portainer
+register_net
 register_docker_image 'portainer/portainer'
 register :vol_root, "/Volumes/docker"
-register_net 'dailyops'
 
 #https://portainer.readthedocs.io/en/stable/deployment.html#quick-start
 task :main do
