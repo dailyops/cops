@@ -461,9 +461,8 @@ class DockletCLI < Thor
   end
 
   desc 'envrun [args]', 'deploy app'
-  option :env, banner: "run app env"
-  def envrun(*args)
-    denv = options[:env] || env
+  def envrun(denv=nil, *args)
+    denv ||= env
     denv = case denv
       when 'dev'
         'development'
@@ -474,18 +473,19 @@ class DockletCLI < Thor
       end
     # fix env bad design 
     cmd = "APP_ENV=#{denv} #{dklet_script} #{args.join(' ')}"
-    puts cmd 
+    puts cmd if options[:debug] 
     unless options[:dry]
       system cmd
     end
   end
+  map 'env' => 'envrun'
 
   desc 'comprun', 'compose run'
   def comprun(*args)
     cmd <<~Desc
       #{compose_cmd} #{args.join(' ')}
     Desc
-    puts cmd
+    puts cmd if options[:debug]
     system cmd unless options[:dry]
   end
 
