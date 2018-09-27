@@ -1,11 +1,18 @@
 #!/usr/bin/env ruby
-require_relative '../lib/docker_kit'
 
 file = ARGV[0]
 abort "Error: require docklet file!" unless file
-
 $PROGRAM_NAME = file
 ARGV.shift
+
+# trick to handle env like vars
+argv = ARGV
+idx = argv.index('--env') || argv.index('-e')
+if idx
+  ENV['APP_ENV'] ||= argv[idx+1]
+end
+
+require_relative '../lib/docker_kit'
 load file
 
 # load tag-specific features, eg. rails_web
@@ -14,4 +21,4 @@ app_tags.each do |atag|
   require_relative "../app_tags/#{atag}"
 end
 
-let_cli_magic_start! # make dockerize fun with ruby 
+let_cli_magic_start! # make dockerize fun with ruby

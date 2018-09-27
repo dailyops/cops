@@ -280,6 +280,7 @@ class DockletCLI < Thor
   default_command :main
   class_option :debug, type: :boolean, default: false
   class_option :dry, type: :boolean, default: false
+  class_option :env, banner: 'app env', aliases: ['-e']
 
   desc 'main', 'main user entry'
   option :preclean, type: :boolean, default: true, banner: 'clean before do anything'
@@ -294,8 +295,9 @@ class DockletCLI < Thor
 
   desc 'console', 'get ruby console'
   def console
-    byebug
-    puts 'finish' if options[:debug]
+    pp registry
+    byebug 
+    puts "=ok"
   end
 
   desc 'log [CONTAINER]', 'logs in container'
@@ -418,11 +420,6 @@ class DockletCLI < Thor
     end
   end
 
-  desc 'info', 'display dklet info in registry'
-  def info
-    pp registry
-  end
-
   desc 'image_name', 'display image name'
   def image_name
     puts docker_image
@@ -459,26 +456,6 @@ class DockletCLI < Thor
     system "docker network rm #{name}"
     puts "network #{name} cleaned"
   end
-
-  desc 'envrun [args]', 'deploy app'
-  def envrun(denv=nil, *args)
-    denv ||= env
-    denv = case denv
-      when 'dev'
-        'development'
-      when 'prod'
-        'production'
-      else
-        denv
-      end
-    # fix env bad design 
-    cmd = "APP_ENV=#{denv} #{dklet_script} #{args.join(' ')}"
-    puts cmd if options[:debug] 
-    unless options[:dry]
-      system cmd
-    end
-  end
-  map 'env' => 'envrun'
 
   desc 'comprun', 'compose run'
   def comprun(*args)

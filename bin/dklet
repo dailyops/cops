@@ -3,7 +3,7 @@ add_note <<~Note
   Base dklet settings and commands
 Note
 
-register_net 'dailyops' # as default user network
+register_net
 register :vol_root, '/Volumes/docker' # Mac tested
 
 task :main, preclean: false do
@@ -21,15 +21,6 @@ custom_commands do
       sudo mkdir -p #{fetch(:vol_root)}
     Desc
 
-    puts "dknet ready to fly with you!"
-  end
-
-  desc 'config', 'show config info'
-  def conf
-    puts "==dklet preferences"
-    info = {
-      net: netname
-    }
-    puts info
+    puts "dklet ready to fly with you!"
   end
 end
