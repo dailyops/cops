@@ -1,3 +1,4 @@
+ENV['BUNDLE_GEMFILE'] ||= File.expand_path('../Gemfile', __dir__)
 require 'bundler/setup'
 Bundler.require :default
 require 'byebug'
@@ -350,7 +351,7 @@ class DockletCLI < Thor
   end
 
   desc 'build', 'build image'
-  option :opts, banner: 'run extra options'
+  option :opts, banner: 'build extra options like --no-cache'
   def build
     return unless dockerfile
 
