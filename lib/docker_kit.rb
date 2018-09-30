@@ -14,6 +14,25 @@ module DockDSL
     DockDSL.registry
   end
 
+  def add_dsl &blk
+    DockDSL.module_eval &blk
+  end
+
+  def self.dsl_methods
+    @_dsl_methods ||= []
+  end
+
+  def dsl_methods
+    DockDSL.dsl_methods
+  end
+
+  def self.dsl_method(mthd)
+    dsl_methods << mthd
+    define_method(mthd) do
+      fetch_with_default(mthd)
+    end
+  end
+  
   def register(key, value)
     registry[key] = value
   end
@@ -26,38 +45,95 @@ module DockDSL
     val
   end
 
+  def fetch_with_default(key)
+    provided = fetch(key)
+    return provided if provided
+    mthd = "default_#{key}"
+    send(mthd) if respond_to?(mthd)
+  end
+
   def register_docker_image(name)
     register :docker_image, name
   end
 
-  def docker_image
-    provided = fetch(:docker_image)
-    return provided if provided
-    imgname = dklet_script.basename('.rb').to_s
-    if %w(dklet try).include?(imgname)
-      imgname = script_path.basename.to_s
-    end
-    # NOTE: avoid use latest tag
-    "docklet/#{imgname}:newest"
+  # release is not relevant
+  def default_docker_image
+    "#{env}/#{appname}:#{image_tag}"
   end
 
-  # 触发脚本所在目录
-  def script_path
-    dklet_script.realdirpath.dirname
+  def default_image_tag
+    "edge"
   end
 
-  def script_name
-    name = dklet_script.basename('.rb').to_s
-    return name unless name == 'dklet'
-    "#{script_path.basename.to_s}_dklet"
+  def default_image_labels
+    app_labels = image_label_hash.map{|k, v| [k,v].join('=') }.join(' ')
+    "maintainer=dailyops built_from=docklet #{app_labels}"
   end
+
+  def image_label_hash
+    {
+      dklet_app: appname,
+      dklet_env: env
+    }
+  end
+
+  def release_label_hash
+    image_label_hash.merge(dklet_release: app_release)
+  end
+
+  # maybe from external image
+  def dkrun_cmd
+    release_labels = release_label_hash.map do |k, v|
+      "--label=#{k}=#{v}"
+    end.join(' ')
+    cmd = "docker run #{release_labels}"
+    cmd += " --net #{netname}" if netname
+    cmd
+  end
+
+  def container_filters_for_release
+    release_label_hash.map do |k, v|
+      "--filter label=#{k}=#{v}"
+    end.join(' ')
+  end
+
+  def containers_for_release
+    `docker ps -aq #{container_filters_for_release}`.split("\n")
+  end
+
+  # Note: if img1:t1 = img2:t2 points to same image hashid, they will be selected as same
+  def containers_for_image(img = docker_image)
+    `docker ps -aq -f ancestor=#{img}`.split("\n")
+  end
+
+  def containers_in_net(net = netname)
+    `docker ps -aq -f network=#{net}`.split("\n")
+  end 
 
   def dklet_script
     Pathname($PROGRAM_NAME)
   end
 
+  # 触发脚本所在(绝对)路径
+  def script_path
+    dklet_script.realdirpath.dirname
+  end
+
+  # use <parent_path_name>_<script_file_name> to ensure possible unique
+  def script_name # not file name
+    sname = fetch(:script_name)
+    return sname if sname
+    name = dklet_script.basename('.rb').to_s
+    pname = script_path.basename.to_s
+    "#{pname}_#{name}"
+  end
+
   def dklet_lib_path
     Pathname(__dir__)
+  end
+
+  def dklet_tmp_path
+    dklet_lib_path.join('../tmp')
   end
   
   def set_file_for(name, str)
@@ -143,10 +219,6 @@ module DockDSL
     DockletCLI.class_eval &blk
   end
 
-  def add_dsl &blk
-    DockDSL.module_eval &blk
-  end
-
   def add_note str
     (registry[:user_notes] ||= []) << str
   end
@@ -166,18 +238,28 @@ module DockDSL
   end
 
   def ensure_docker_net(name, driver: :bridge)
-    #cmd = "docker network ls --filter name=#{name} -q"
-    cmd = "docker network ls --format '{{.Name}}' --filter name=#{name}"
+    # use label (not name) filter to avoid str part match
+    cmd = "docker network ls -q --filter label=#{label_pair(:name, name)}"
     netid = `#{cmd}`.chomp
-    if netid.length < 1 || netid != name # avoid substr match
-      netid = `docker network create #{name} --driver=#{driver}`
+    if netid && netid.empty?
+      puts "create new network: #{name}"
+      netid = `docker network create #{name} --label #{label_pair(:name, name)} --driver=#{driver}`
     end
     netid
   end
 
+  def label_key(key, prefix: true)
+    prefix ? "dklet.#{key}" : key
+  end
+
+  # key=value pair
+  def label_pair(key, val, prefix: true)
+    [label_key(key, prefix: prefix), val].join('=')
+  end
+
   ## project name for docker-compose
   def compose_name
-    "#{fetch(:compose_name) || script_name}-#{env}"
+    "#{fetch(:compose_name) || appname}_#{env}"
   end
 
   # -f, --file
@@ -192,6 +274,20 @@ module DockDSL
 
   def approot
     fetch(:approot) || build_root || script_path
+  end
+
+  def appname
+    fetch(:appname) || script_name
+  end
+
+  # take into acccount: app, env, app_release
+  def full_release_name
+    [env, appname, app_release].compact.join('_')
+  end
+
+  # make path friendly 
+  def release_path_name
+    full_release_name.gsub(/_/, '-')
   end
 
   def register_app_tag(tag)
@@ -232,24 +328,16 @@ module DockDSL
     register key, path
   end
 
-  def appname
-    fetch(:appname) || approot.basename.to_s
-  end
-
-  def containers_for_image(img = docker_image)
-    `docker ps -aq -f ancestor=#{img}`.split("\n")
-  end
-
   def register_ops(cid)
     register :ops_container, cid
   end
 
-  def ops_container
-    fetch(:ops_container)
+  def default_ops_container
+    containers_for_release.first # || container_name
   end
 
-  def smart_ops_container
-    ops_container || containers_for_image.first
+  def default_container_name
+    full_release_name
   end
 
   def container_missing
@@ -261,7 +349,33 @@ module DockDSL
   end
 
   def env
-    ENV['APP_ENV'] || fetch(:default_env)
+    ENV['APP_ENV'] || fetch(:default_env) || 'dev'
+  end
+
+  # 标识一次运行发布的用途, 如redis for hirails-only
+  def app_release
+    ENV['APP_RELEASE'] || 'default'
+  end
+
+  def volumes_root
+    root = fetch(:volumes_root) || if File.directory?('/Volumes')
+        '/Volumes/docker' # File sharing with Docker for Mac
+      else
+        '/docker-volumes'
+      end
+    Pathname(root)
+  end
+
+  def default_app_volumes
+    volumes_root.join(release_path_name)
+  end
+
+  def register_default_cmd str
+    register :default_cmd, str
+  end
+
+  def default_cmd
+    fetch(:default_cmd)
   end
 end
 
@@ -282,6 +396,7 @@ class DockletCLI < Thor
   class_option :debug, type: :boolean, default: false
   class_option :dry, type: :boolean, default: false
   class_option :env, banner: 'app env', aliases: ['-e']
+  class_option :release, banner: 'what app release for', aliases: ['-r']
 
   desc 'main', 'main user entry'
   option :preclean, type: :boolean, default: true, banner: 'clean before do anything'
@@ -302,7 +417,7 @@ class DockletCLI < Thor
   end
 
   desc 'log [CONTAINER]', 'logs in container'
-  def log(cid = smart_ops_container)
+  def log(cid = ops_container)
     unless cid
       container_missing
       return
@@ -317,17 +432,13 @@ class DockletCLI < Thor
   option :opts, banner: 'docker run options'
   option :exec, type: :boolean, default: true, banner: 'first exec existed container'
   option :allow_tmp, type: :boolean, default: true, banner: 'allow run tmp container'
-  def runsh(cid = smart_ops_container)
-    cmd = options[:cmd]
-    if !cmd && respond_to?(:default_container_cmd)
-      cmd = send(:default_container_cmd)
-    end
-    cmd ||=  'sh'
+  def runsh(cid = ops_container)
+    cmd = options[:cmd] || default_cmd || 'sh'
     if cid && options[:exec]
       dkcmd = "docker exec -it"
       dkcmd += " #{options[:opts]}" if options[:opts]
       dkcmd += " #{cid} #{cmd}"
-      puts "run : #{dkcmd}"
+      puts "run : #{dkcmd}" if options[:debug]
       system dkcmd unless options[:dry]
       return
     end
@@ -337,7 +448,7 @@ class DockletCLI < Thor
       dkcmd += " --network #{netname}" if netname
       dkcmd += " #{options[:opts]}" if options[:opts]
       dkcmd += " #{docker_image} #{cmd}"
-      puts "run: #{dkcmd}"
+      puts "run: #{dkcmd}" if options[:debug]
       system dkcmd unless options[:dry]
     end
   end
@@ -388,13 +499,15 @@ class DockletCLI < Thor
   def clean
     invoke_hooks_for(:clean, type: :before)
 
-    cids = containers_for_image
-    unless cids.empty?
-      str_ids = cids.join(' ')
-      system <<~Desc
-        echo ==clean containers: #{str_ids}
-        docker rm --force #{str_ids}
-      Desc
+    unless specfile # do not clean container if compose-file exists
+      cids = containers_for_release
+      unless cids.empty?
+        str_ids = cids.join(' ')
+        system <<~Desc
+          echo ==clean containers: #{str_ids}
+          docker rm --force #{str_ids}
+        Desc
+      end
     end
 
     invoke_hooks_for(:clean)
@@ -438,33 +551,105 @@ class DockletCLI < Thor
     Desc
   end
 
-  desc 'netup NAME', 'make networking'
-  def netup(name = netname)
-    return unless name
-    ensure_docker_net(name)
-    puts "network #{name} working"
+  desc 'netup [NETNAME]', 'make networking'
+  def netup(net = netname)
+    return unless net
+    ensure_docker_net(net)
+    puts "network #{net} working"
   end
 
-  desc 'netdown NAME', 'clean networking'
+  desc 'netdown [NETNAME]', 'clean networking'
   option :force, type: :boolean, default: false, banner: 'rm forcely'
-  def netdown(name = netname)
-    return unless name
-    global_nets = %i(dailyops)
-    if global_nets.include?(name.to_sym)
-      puts "donot clean global net: #{name}" if options[:debug]
-      return
+  def netdown(net = netname)
+    return unless net
+
+    safely = true
+    cids = containers_in_net(net)
+    unless cids.empty?
+      if options[:force] || yes?("#{cids.size} containers linked #{net}, FORCELY remove?")
+        system "docker rm -f #{cids.join(' ')}"
+      else
+        safely = false
+      end
     end
-    system "docker network rm #{name}"
-    puts "network #{name} cleaned"
+    if safely
+      system "docker network rm #{net}"
+      puts "network #{net} cleaned"
+    end
+  end
+
+  desc 'netps [NETNAME]', 'ps in a network' 
+  def netps(net = netname)
+    return unless net
+    system <<~Desc
+      docker ps -f network=#{net} -a
+    Desc
+  end
+
+  desc 'netls', 'list networks' 
+  def netls()
+    system <<~Desc
+      docker network ls
+    Desc
   end
 
   desc 'comprun', 'compose run'
   def comprun(*args)
-    cmd <<~Desc
+    cmd = <<~Desc
       #{compose_cmd} #{args.join(' ')}
     Desc
     puts cmd if options[:debug]
     system cmd unless options[:dry]
+  end
+
+  desc 'vols', 'ls volumes'
+  def vols
+    system <<~Desc
+      ls -l #{volumes_root}/
+    Desc
+  end
+
+  desc 'info', 'show system info'
+  def info
+    h = {
+      script: dklet_script,
+      script_path: script_path,
+      script_name: script_name,
+      approot: approot,
+      appname: appname,
+      env: env,
+      release: app_release,
+      full_release_name: full_release_name,
+      container_name: container_name,
+      image: docker_image,
+      build_root: build_root,
+      build_net: build_net,
+      release_labels: release_label_hash,
+      network: netname,
+      voluemes_root: volumes_root,
+      app_volumes: app_volumes,
+      registry: registry
+    }
+    pp h
+  end
+  map 'inspect' => 'info'
+
+  desc 'mock1', ''
+  def mock1(time)
+    puts "invoked at #{time}"
+  end
+
+  desc 'mock2', ''
+  def mock2
+    invoke :mock1, [Time.now]
+    puts 'first invoked'
+    invoke :mock1, [Time.now]
+    puts 'sencond invoked'
+
+    invoke2 :mock1, [Time.now], {}
+    puts 'third invoked'
+    invoke2 :mock1, [Time.now], {}
+    puts '4th invoked'
   end
 
   no_commands do
@@ -484,7 +669,24 @@ class DockletCLI < Thor
         end
       end
     end
+
+    # https://github.com/erikhuda/thor/issues/73
+    def invoke2(task, args, options)
+      (klass, task) = Thor::Util.find_class_and_command_by_namespace(task)
+      klass.new.invoke(task, args, options)
+    end
   end
+end
+
+%i(
+  docker_image
+  image_tag
+  image_labels
+  container_name
+  ops_container
+  app_volumes
+  ).each do |m|
+  DockDSL.dsl_method(m)
 end
 
 extend DockDSL

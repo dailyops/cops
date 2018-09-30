@@ -6,7 +6,7 @@ Note
 
 write_dockerfile <<~Desc
   FROM ubuntu:18.04
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
 Desc
 
 task :main do

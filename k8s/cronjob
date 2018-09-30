@@ -3,7 +3,7 @@
 # https://docs.docker.com/engine/reference/builder/#usage
 write_dockerfile <<~Desc
   FROM busybox:1.29
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
   CMD sh
 Desc
 

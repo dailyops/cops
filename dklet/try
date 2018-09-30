@@ -1,6 +1,7 @@
 #!/usr/bin/env rundklet
 write_dockerfile <<~Desc
   FROM alpine:3.7
+  LABEL <%=image_labels%>
   ENV name=geek
   ENV name1=${name}-1
   CMD sh -c 'echo name=$name name1=$name1'

@@ -3,7 +3,7 @@
 # ref https://docs.docker.com/engine/reference/builder/#usage
 write_dockerfile <<~Desc
   FROM nginx:1.15-alpine
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
 Desc
 
 write_specfile <<~Desc

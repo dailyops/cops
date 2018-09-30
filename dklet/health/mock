@@ -1,0 +1,26 @@
+#!/usr/bin/env rundklet
+write_dockerfile <<~Desc
+  FROM  alpine:3.7
+  LABEL <%=image_labels%>
+  # default: --start-period=0s --retries=3
+  HEALTHCHECK --interval=1s --timeout=3s --start-period=1ms \
+    CMD ps aux|grep ping | grep -v grep | grep -v 'sh -c'
+  CMD sh -c "sleep 5; ping localhost"
+Desc
+
+task :main do
+  system <<~Desc
+    #{dkrun_cmd} --name #{container_name} -d #{docker_image}
+    watch docker ps -f name=#{container_name}
+  Desc
+end
+
+add_note <<~Note
+  test healthcheck  
+  https://docs.docker.com/engine/reference/builder/#healthcheck
+
+  结论：healthcheck按指定interval运行，不会因探测失败而终止, 所以探测频率不应太快以免形成负担，探测方法尽量耗资源少; 另外timeout指运行healthcheck cmd的时间，如超时则认为此次check fail，但探测进程可能仍在执行；另外start-period时间可以避免bootstrap期间的总是失败而导致的unhealthy，但探测还是按指定频率执行的；retries则可以用于定义unhealthy规则
+  status: starting --> unhealthy or healthy --> ... no end
+
+  另外docker run和compose file都可以指定类似的配置参数
+Note

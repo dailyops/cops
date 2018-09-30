@@ -1,7 +1,7 @@
 #!/usr/bin/env rundklet
 write_dockerfile <<~Desc
   FROM postgres:9.6-alpine
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
 Desc
 
 register_docker_image 'docklet/pg-compose:newest'

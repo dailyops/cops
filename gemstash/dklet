@@ -5,12 +5,13 @@ add_note <<~Note
 Note
 
 require_relative 'shared'
-register :gemvol, "/Volumes/docker/gemstash"
+register :appname, 'gemstash'
+register :app_volumes, volumes_root.join('gemstash')
 
 # https://hub.docker.com/r/govuk/gemstash-alpine/~/dockerfile/
 write_dockerfile <<~Desc
   FROM ruby:2.5-alpine3.7
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
   RUN apk add build-base sqlite-dev && \
       gem install --no-ri --no-rdoc gemstash
   EXPOSE 9292
@@ -22,9 +23,9 @@ Desc
 task :main do
   invoke :netup, [], {}
   system <<~Desc
-    docker run -d --name #{fetch(:service)} --net #{netname} --restart always \
+    #{dkrun_cmd} -d --name #{fetch(:service)} --restart always \
       -p #{fetch(:host_port)}:#{fetch(:service_port)} \
-      -v #{fetch(:gemvol)}:/root/.gemstash \
+      -v #{app_volumes}:/root/.gemstash \
       -e VIRTUAL_HOST=gemstash.lh \
       #{docker_image}
   Desc
@@ -34,9 +35,8 @@ custom_commands do
   desc 'ls', 'show volume data'
   def ls
     system <<~Desc
-      echo volume at: #{fetch(:gemvol)}
-      du -hs #{fetch(:gemvol)}
-      ls -l #{fetch(:gemvol)}
+      du -hs #{app_volumes}
+      ls -l #{app_volumes}
     Desc
   end
 

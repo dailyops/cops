@@ -10,33 +10,48 @@ Note
 # user/passwd: admin/portainer
 register_net
 register_docker_image 'portainer/portainer'
-register :vol_root, "/Volumes/docker"
+register :app_volumes, volumes_root.join('portainer')
 
 #https://portainer.readthedocs.io/en/stable/deployment.html#quick-start
 task :main do
   invoke :netup, [], {}
 
   system <<~Desc
-    docker run -d -p 9000:9000 \
-      --net #{netname} --name portainer --restart always \
+    #{dkrun_cmd} -d --name #{container_name} --restart always \
       -e VIRTUAL_HOST=portainer.lh,p.lh \
       -v /var/run/docker.sock:/var/run/docker.sock \
-      -v #{fetch(:vol_root)}/portainer:/data #{docker_image}
+      -v #{app_volumes}:/data \
+      #{docker_image}
     #open http://localhost:9000
   Desc
 end
 
 __END__
 
-#write_specfile <<~Desc
-  #version: '2'
-  #services:
-    #portainer:
-      #image: portainer/portainer
-      #command: -H unix:///var/run/docker.sock
-      #volumes:
-        #- /var/run/docker.sock:/var/run/docker.sock
-        #- portainer_data:/data
-  #volumes:
-    #portainer_data:
-#Desc
+version: '2'
+services:
+  portainer:
+    image: portainer/portainer
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+volumes:
+  portainer_data:
+
+templates:
+  image: portainer/templates
+  container_name: "portainer-templates"
+  restart: always
+
+portainer:
+  image: portainer/portainer
+  container_name: "portainer-web"
+  restart: always
+  command: --templates http://templates/templates.json
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ~/upnetdata/portainer:/data
+  #environment:
+    ## nginx vhost
+    #- VIRTUAL_HOST=p.cao9.me, portainer.cao9.me

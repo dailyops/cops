@@ -1,7 +1,9 @@
 #!/usr/bin/env rundklet
+add_note <<~Note
+  https://docs.docker.com/engine/reference/builder/#arg
+  http_proxy可以不指定ARG http_proxy指令，但要指定--build-arg http_proxy, 内置支持，参见官方文档
+Note
 
-# https://docs.docker.com/engine/reference/builder/#arg
-# http_proxy可以不指定ARG http_proxy指令，但要指定--build-arg http_proxy, 内置支持，参见官方文档
 write_dockerfile <<~Desc
   FROM alpine
   ARG var_in_args

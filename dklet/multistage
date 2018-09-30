@@ -10,7 +10,7 @@ register :base_image, "docklet/#{appname}-try:base"
 
 write_dockerfile <<~Desc
   FROM alpine:3.7 as base
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
   WORKDIR /tmp1
   RUN echo hi from base > hibase
 

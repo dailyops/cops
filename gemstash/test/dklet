@@ -5,12 +5,12 @@ add_note <<~Note
 Note
 
 require_relative '../shared'
-register_docker_image "docklet/#{fetch(:service)}-test:newest"
+register :appname, 'gemstash-test'
 register_build_net netname
 
 write_dockerfile <<~Desc
   FROM ruby:2.5-alpine3.7
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
   WORKDIR /tmp1
   RUN apk add build-base
   #RUN bundle config mirror.https://rubygems.org.fallback_timeout 3
@@ -21,7 +21,7 @@ Desc
 
 task :main do
   system <<~Desc
-    echo nothing...
+    docker run --rm -i #{docker_image} bundle show
   Desc
 end
 

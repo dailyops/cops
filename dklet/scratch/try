@@ -8,7 +8,7 @@ register :hello_repo, script_path.join('../../local/hello-world')
 
 write_dockerfile <<~Desc
   FROM scratch
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
   ADD hello /
   CMD ["/hello"]
 Desc

@@ -4,7 +4,12 @@ add_note <<~Note
 Note
 
 register_net
-register :vol_root, '/Volumes/docker' # Mac tested
+
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL <%=image_labels%>
+Desc
+register_docker_image 'docklet:newest'
 
 task :main, preclean: false do
   puts "Welcome to dklet"
@@ -18,7 +23,8 @@ custom_commands do
 
     system <<~Desc
       # ensure global volumes root exists
-      sudo mkdir -p #{fetch(:vol_root)}
+      sudo mkdir -p #{volumes_root}
+      mkdir -p #{dklet_tmp_path}
     Desc
 
     puts "dklet ready to fly with you!"

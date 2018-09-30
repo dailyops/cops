@@ -10,10 +10,9 @@ register_net 'dknet-try'
 
 task :main do
   invoke :netup, [], {}
-  cname = 'dknet-try1'
   system <<~Desc
-    docker run -d --name #{cname} --net=#{netname} #{docker_image} ping localhost
-    docker run -it --rm --net=#{netname} #{docker_image} ping -c2 #{cname}
+    #{dkrun_cmd} -d --name #{container_name} #{docker_image} ping localhost
+    #{dkrun_cmd} -it --rm #{docker_image} ping -c2 #{container_name}
   Desc
 end
 

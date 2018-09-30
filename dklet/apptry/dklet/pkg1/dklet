@@ -8,7 +8,7 @@ register_docker_image "docklet/#{appname}-#{script_path.basename}:newest"
 
 write_dockerfile <<~Desc
   FROM alpine:3.7
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
   WORKDIR /tmp/pkg
   COPY fileinpkg .
 Desc

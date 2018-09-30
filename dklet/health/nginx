@@ -1,0 +1,24 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  https://medium.com/@fro_g/healthchecks-for-nginx-in-docker-dbdc0f8b3772
+Note
+
+write_dockerfile <<~Desc
+  FROM  nginx:1.15-alpine
+  LABEL <%=image_labels%>
+  # default: --start-period=1s --retries=3
+  HEALTHCHECK --interval=2s --timeout=3s \
+    CMD wget -q --tries=1 --spider http://localhost/ || exit 1
+    # no curl in alpine-base image
+    #CMD curl --fail http://localhost/ || exit 1
+    #CMD curl -f http://localhost/ || exit 1
+  #HEALTHCHECK --interval=5s --timeout=5s CMD wget localhost -qO- > /dev/null 2>&1 || exit 1
+Desc
+
+task :main do
+  system <<~Desc
+    #{dkrun_cmd} --name #{container_name} -d #{docker_image}
+  Desc
+  sleep 2
+  invoke :ps
+end

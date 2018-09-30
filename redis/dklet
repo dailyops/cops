@@ -1,0 +1,85 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  The name Redis means REmote DIctionary Server.
+  https://hub.docker.com/_/redis/
+  https://www.tutorialspoint.com/redis
+  https://www.tutorialspoint.com/redis/redis_configuration.htm
+  redis modules
+  https://redislabs.com/community/redis-modules-hub/
+  https://github.com/sameersbn/docker-redis
+Note
+
+register_net
+register :appname, 'redis'
+register_default_cmd "redis-cli -h #{container_name}"
+
+write_dockerfile <<~Desc
+  FROM redis:4.0-alpine
+  LABEL <%=image_labels%>
+Desc
+
+task :main do
+  system <<~Desc
+    #{dkrun_cmd} --name #{container_name} -d --restart always \
+      -v #{app_volumes}:/data \
+      #{docker_image} redis-server --appendonly yes
+      # --loglevel warning --requirepass pswd
+  Desc
+  # with self config
+  # #{dkrun_cmd} -v redis.conf:/usr/local/etc/redis/redis.conf #{docker_image} redis-server /usr/local/etc/redis/redis.conf
+end
+
+custom_commands do
+  desc 'conf', 'get redis config'
+  def conf
+    # https://redis.io/topics/config
+    puts 'https://raw.githubusercontent.com/antirez/redis/4.0/redis.conf'
+  end
+
+  desc 'test', 'test redis-cli commands'
+  def test
+    system <<~Desc
+      #{dkrun_cmd} --rm -i \
+        #{docker_image} redis-cli -h #{container_name} set tname geek
+      #{dkrun_cmd} --rm -i \
+        #{docker_image} redis-cli -h #{container_name} get tname
+    Desc
+  end
+end
+
+__END__
+
+> CONFIG GET *
+> CONFIG GET maxmemory-policy
+
+```
+# redis-cli get mypasswd
+(error) NOAUTH Authentication required.
+
+/data # redis-cli
+127.0.0.1:6379> get name
+(error) NOAUTH Authentication required.
+127.0.0.1:6379> auth redispassword
+OK
+127.0.0.1:6379> get name
+(nil)
+
+127.0.0.1:6379> help @connection
+
+  AUTH password
+  summary: Authenticate to the server
+  since: 1.0.0
+
+  ECHO message
+```
+
+cat /etc/passwd | redis-cli -x set mypasswd
+redis-cli get mypasswd
+redis-cli -r 100 lpush mylist x
+redis-cli -r 100 -i 1 info | grep used_memory_human:
+redis-cli --eval myscript.lua key1 key2 , arg1 arg2 arg3
+redis-cli --scan --pattern '*:12345*'
+
+## cluster
+
+https://www.linode.com/docs/applications/big-data/how-to-install-and-configure-a-redis-cluster-on-ubuntu-1604/

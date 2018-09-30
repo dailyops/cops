@@ -3,7 +3,7 @@
 # ref https://docs.docker.com/engine/reference/builder/#usage
 write_dockerfile <<~Desc
   FROM alpine:3.7
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
   COPY entrypoint.sh /entrypoint.sh
   # exec syntax as best practice
   ENTRYPOINT ["/entrypoint.sh"]

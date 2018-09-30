@@ -1,0 +1,7 @@
+#!/usr/bin/env rundklet
+task :main do
+  system <<~Desc
+    pgweb --bind 0.0.0.0 --listen 8081 --auth-user pgweb \
+      --auth-pass=pgweb --ssl=disable --skip-open --db xxx_pg_url
+  Desc
+end

@@ -8,7 +8,7 @@ Note
 # https://docs.docker.com/develop/develop-images/dockerfile_best-practices
 write_dockerfile <<~Desc
   FROM alpine:3.7
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
   RUN mkdir /vol1 && echo hi volume at `date` built > /vol1/hi
   VOLUME /vol1 /vol2/missing-dir1/sub-dir2
   RUN echo write after volume declare >> /vol1/hi

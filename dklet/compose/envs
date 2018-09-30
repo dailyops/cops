@@ -1,0 +1,48 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  test envs in compose
+  https://docs.docker.com/compose/compose-file/#env_file
+  https://docs.docker.com/compose/env-file/
+  https://docs.docker.com/compose/environment-variables/
+Note
+
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL <%=image_labels%>
+  ENV name=geek
+  ENV name1=${name}-1
+  CMD sh -c 'echo name=$name name1=$name1'
+Desc
+
+#https://docs.docker.com/compose/compose-file/
+write_specfile <<~Desc
+  version: '3.1'
+  services:
+    ops:
+      image: #{docker_image}
+      command:
+        - printenv
+      environment:
+        name: env1-in-compose
+        #bool1: true # error
+        str1: 'yes'
+      # overwrite by environment section
+      env_file:
+        - files/common.env
+        - files/common2.env
+        # require file exist
+        #- not-existing.env
+Desc
+
+task :main do
+  system <<~Desc
+    #{compose_cmd} up 
+  Desc
+end
+
+before_task :clean do
+  system <<~Desc
+    #{compose_cmd} down
+  Desc
+end
+

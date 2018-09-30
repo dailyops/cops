@@ -26,6 +26,5 @@ Note
 
 task :main do
   system <<~Desc
-    # docker run --rm #{docker_image} echo xxx in container shell
   Desc
 end

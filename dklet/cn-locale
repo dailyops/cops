@@ -2,7 +2,7 @@
 
 write_dockerfile <<~Desc
   FROM alpine:3.7
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
   ARG TIMEZONE=Asia/Shanghai
   RUN apk update && \
       apk add --no-cache tzdata && \
@@ -18,6 +18,6 @@ task :main do
 end
 
 add_note <<~Note
-  make quick note here
+  make docker love China
 Note
 

@@ -8,12 +8,12 @@ Note
 # https://docs.docker.com/develop/develop-images/dockerfile_best-practices
 write_dockerfile <<~Desc
   FROM haproxy:1.8
-  LABEL maintainer=dailyops
+  LABEL <%=image_labels%>
   COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
 Desc
 
 task :main do
   system <<~Desc
-    docker run -it --rm --name haproxy-syntax-check #{docker_image} haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg
+    #{dkrun_cmd} -it --rm #{docker_image} haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg
   Desc
 end

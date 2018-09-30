@@ -174,15 +174,6 @@ function dkch(){
   docker exec -it ubuntu env LANG=C.UTF-8 /bin/bash
 }
 
-# redis cache
-#function rediscli(){
-#  docker run -it --rm sameersbn/redis redis-cli -h docker.for.mac.localhost
-#}
-
-function dkredis(){
-  docker run -it --rm sameersbn/redis $*
-}
-
 # 如何解决docker build 时的翻墙问题
 function dkbuild(){
   fanqiang #设置翻墙proxy

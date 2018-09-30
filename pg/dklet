@@ -1,0 +1,110 @@
+#!/usr/bin/env rundklet
+register_net
+register :appname, 'pg'
+register_default_cmd "psql -U postgres"
+
+# TODO fix production safety!
+register :initpassword, 'password'
+register :dbapassword,  'dbapassword'
+
+write_dockerfile <<~Desc
+  FROM postgres:9.6-alpine
+  LABEL <%=image_labels%> \
+        release=#{app_release}
+  USER postgres
+  ADD entrypoint-initdb.d /docker-entrypoint-initdb.d
+Desc
+
+before_task :build do
+  pswd = fetch(:dbapassword)
+  tmpl = <<~Desc
+    CREATE USER dbauser with superuser password '#{pswd}';
+  Desc
+  erb = ERB.new(tmpl, nil, '%<>')
+  rendered = erb.result(binding)
+  
+  file = script_path.join('entrypoint-initdb.d/init.sql')
+  file.write(rendered)
+  puts "==update file: #{file}"
+end
+
+task :main do
+  system <<~Desc
+    #{dkrun_cmd} -d --name #{container_name} -p :5432 \
+      -e POSTGRES_PASSWORD=#{fetch(:initpassword)} \
+      -v "#{script_path}/conf/postgresql.conf":/etc/postgresql/postgresql.conf \
+      -v "#{app_volumes}":/var/lib/postgresql/data \
+      #{docker_image} -c 'config_file=/etc/postgresql/postgresql.conf'
+      # -c 'shared_buffers=256MB' -c 'max_connections=200'
+  Desc
+  
+  # TODO health check?
+  t0 = Time.now
+  until system("docker exec #{ops_container} pg_isready > /dev/null")
+    puts "waiting for initdb..."
+    sleep 1
+  end
+  puts "wait taken #{Time.now - t0} seconds"
+end
+
+custom_commands do
+  desc 'sampleconf', ''
+  def sampleconf
+    # debian /usr/share/postgresql/postgresql.conf.sample
+    system <<~Desc
+      docker run -i --rm #{docker_image} cat /usr/local/share/postgresql/postgresql.conf.sample | tee #{script_path}/conf/postgresql.conf.sample
+      docker run -i --rm #{docker_image} cat /usr/local/share/postgresql/pg_hba.conf.sample | tee #{script_path}/conf/pg_hba.conf.sample
+    Desc
+  end
+
+  desc 'entrypoint', 'show entrypoint'
+  def entrypoint
+    invoke :runsh, [], {cmd: 'cat docker-entrypoint.sh'}
+  end
+
+  desc 'dbuser USER PASSWORD', 'create a dbuser for app eg. rails'
+  def dbuser(user, passwd)
+    # TODO fix tmp file and run
+    tmpfile = volumes_root.join('tmp.sql')
+    tmpfile.write <<~Desc
+      CREATE USER #{user} with CREATEDB PASSWORD '#{passwd}';
+    Desc
+    system <<~Desc
+      #{dkrun_cmd} -i --rm -v #{tmpfile}:/tmpsqlfile #{docker_image} \
+        psql -f /tmpsqlfile postgres://postgres:#{fetch(:initpassword)}@#{container_name}/postgres
+    Desc
+    tmpfile.delete
+  end
+
+  desc 'test', 'test pg server feature'
+  def test # if password changed
+    cname = 'pgpswd1'
+    pswd = fetch(:initpassword)
+    pswd1 = "#{pswd}-changed"
+    system <<~Desc
+      docker rm -f #{cname}
+      #{dkrun_cmd} -d --name #{cname} -p :5432 \
+        -e POSTGRES_PASSWORD=#{pswd1} \
+        -v "#{app_volumes}":/var/lib/postgresql/data \
+        #{docker_image}
+    Desc
+    
+    t0 = Time.now
+    until system("docker exec #{cname} pg_isready > /dev/null")
+      puts "waiting for initdb..."
+      sleep 1
+    end
+    puts "wait taken #{Time.now - t0} seconds"
+
+    # use different password to startup, no effect 
+    invoke :runsh, [], {exec: false, cmd: "psql -c 'show work_mem' postgres://postgres:#{pswd1}@#{cname}/postgres"}
+    ## ok, keep old init password 
+    #invoke :runsh, [], {exec: false, cmd: "psql -c 'show work_mem' postgres://postgres:#{pswd}@#{cname}/postgres"}
+  end
+end
+
+__END__
+
+try master-slave cluster
+
+healthcheck https://github.com/docker-library/healthcheck/blob/master/postgres/docker-healthcheck

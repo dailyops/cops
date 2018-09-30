@@ -1,0 +1,22 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  try label design
+  https://docs.docker.com/config/labels-custom-metadata/
+  https://medium.com/@chamilad/lets-make-your-docker-image-better-than-90-of-existing-ones-8b1e5de950d
+Note
+
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL <%=image_labels%>
+  CMD ["sleep", "600"]
+Desc
+
+task :main do
+  #puts <<~Desc
+  system <<~Desc
+    docker inspect -f 'index {{ .Config.Labels }}' #{docker_image}
+    #{dkrun_cmd} -d --name #{container_name} #{docker_image}
+    # labels are image-labels + container-labels
+    docker inspect -f 'index {{ .Config.Labels }}' #{container_name}
+  Desc
+end
