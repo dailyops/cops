@@ -1,0 +1,119 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  vault in production ready use
+  https://www.katacoda.com/courses/docker-production/vault-secrets
+  https://www.melvinvivas.com/secrets-management-using-docker-hashicorp-vault/
+Note
+
+register_docker_image "vault:0.11.1"
+register :host_port, 28200
+
+task :main do
+  #-e 'VAULT_LOCAL_CONFIG={"backend": {"file": {"path": "/vault/file"}}, ...}' 
+  system_run <<~Desc
+    #{dkrun_cmd(named: true)} -d --restart always \
+      --cap-add=IPC_LOCK \
+      -p #{fetch(:host_port)}:8200 \
+      -e VAULT_ADDR='http://0.0.0.0:8200' \
+      -v #{script_path}/config.hcl:/vault/config/config.hcl \
+      -v #{app_volumes}:/vault/file \
+      #{docker_image} server
+  Desc
+end
+
+custom_commands do
+  # hot to get authenticated/login status
+  
+  desc 'try', 'try command after login'
+  def try
+    container_run <<~Desc
+      vault kv put secret/try name=geek-#{::Util.human_timestamp}
+      vault kv get secret/try
+      vault kv get -field name secret/try
+    Desc
+  end
+  
+  desc 'login', 'unseal and login after start'
+  def login
+    container_run <<~Desc
+      vault status
+      vault operator unseal #{conf_hash['keys'].first}
+      vault login #{conf_hash['root_token']}
+      vault status
+    Desc
+  end
+
+  desc 'init_stats', 'query init status'
+  def init_status
+    system <<~Desc
+      curl #{host_uri}/v1/sys/init
+    Desc
+  end
+
+  desc 'init', 'init vault server'
+  def init
+    if keysfile.exist?
+      if options[:force] || yes?("Already existed #{keysfile}, continue?")
+        # avoid dangerous loss
+        backup = keysfile.to_s + "-bak-#{::Util.human_timestamp}"
+        FileUtils.cp keysfile, backup
+      else
+        abort "#{keysfile} existed!"
+      end
+    end
+    # avoid {"errors":["Vault is already initialized"]}???
+    system <<~Desc
+      curl --request POST \
+      --data '{"secret_shares": 1, "secret_threshold": 1}' \
+      #{host_uri}/v1/sys/init > #{keysfile}
+    Desc
+  end
+
+  desc 'keys', 'show keys info'
+  def keys
+    system <<~Desc
+      echo keys file in #{keysfile}
+      cat #{keysfile}
+    Desc
+  end
+
+  desc 'ui', 'open web'
+  def ui
+    system <<~Desc
+      open "#{host_uri}/ui/"
+    Desc
+  end
+
+  no_commands do
+    def keysfile
+      dklet_config_for("init-keys.json") 
+    end
+
+    def host_uri
+      "http://localhost:#{fetch(:host_port)}"
+    end
+
+    def conf_hash
+      require 'json'
+      JSON.parse File.read(keysfile)
+    end
+  end
+end
+
+__END__
+
+## ways to init vault server
+
+// way1: cmd
+vault operator init -key-shares=1 -key-threshold=1
+
+// way2: api
+curl \
+    --request POST \
+    --data '{"secret_shares": 1, "secret_threshold": 1}' \
+    http://127.0.0.1:8200/v1/sys/init
+
+// way3: web
+open http://localhost:8200/ui/
+it will hint to init if not
+

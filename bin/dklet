@@ -4,12 +4,12 @@ add_note <<~Note
 Note
 
 register_net
+register :appname, 'docklet'
 
 write_dockerfile <<~Desc
   FROM alpine:3.7
   LABEL <%=image_labels%>
 Desc
-register_docker_image 'docklet:newest'
 
 task :main, preclean: false do
   puts "Welcome to dklet"
@@ -28,5 +28,25 @@ custom_commands do
     Desc
 
     puts "dklet ready to fly with you!"
+  end
+
+  desc '', ''
+  def clear
+    system <<~Desc
+    Desc
+  end
+
+  desc '', ''
+  def stat
+    system <<~Desc
+      echo ==files total count:
+      git ls-files | wc -l
+      echo ==lib lines:
+      wc -l lib/docker_kit.rb
+      echo ==containers
+      docker ps -f label=dklet_env=#{env}
+      echo ==images
+      docker images -f label=dklet_env=#{env}
+    Desc
   end
 end

@@ -22,11 +22,6 @@ write_specfile <<~Desc
         - "80:80"
       volumes:
         - /var/run/docker.sock:/tmp/docker.sock:ro
-    # demo service
-    whoami:
-      image: jwilder/whoami
-      environment:
-        - VIRTUAL_HOST=whoami.lh
   networks:
     default:
       external:

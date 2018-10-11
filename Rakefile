@@ -28,23 +28,26 @@ namespace :dklet do
   end
 end
 
-namespace :dailyops do
-  task :up do
-    system <<~Desc
-      dklet init
-      case/portainer/dklet
-      case/nginx-proxy/dklet
-      gemstash/dklet
-      pg/dklet -e prod
-      redis/dklet -e prod
-    Desc
-  end
+task default: ['dklet:test']
 
-  task :down do
-    system <<~Desc
-      dklet netdown dailyops --force
-    Desc
+task :devdns do
+  script = 'local/devdns/dklet'
+  if File.exists?(script)
+    system script
+    puts "==run #{script}"
+  else
+    puts "not found #{script}"
   end
 end
 
-task default: ['dklet:test']
+task :dailyops do
+  system <<~Desc
+    dklet init
+    case/portainer/dklet
+    case/nginx-proxy/dklet
+    gemstash/dklet
+    pg/dklet -e prod
+    redis/dklet -e prod
+  Desc
+  Rake::Task[:devdns].invoke
+end

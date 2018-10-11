@@ -9,6 +9,7 @@ Note
 
 # user/passwd: admin/portainer
 register_net
+register :appname, 'portainer'
 register_docker_image 'portainer/portainer'
 register :app_volumes, volumes_root.join('portainer')
 

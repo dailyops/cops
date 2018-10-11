@@ -82,13 +82,23 @@ module DockDSL
   end
 
   # maybe from external image
-  def dkrun_cmd
-    release_labels = release_label_hash.map do |k, v|
-      "--label=#{k}=#{v}"
-    end.join(' ')
-    cmd = "docker run #{release_labels}"
+  def dkrun_cmd(labeled: true, opts: nil, named: false)
+    cmd = "docker run"
+    if labeled
+      release_labels = release_label_hash.map do |k, v|
+        "--label=#{k}=#{v}"
+      end.join(' ')
+      cmd += " #{release_labels}"
+    end
     cmd += " --net #{netname}" if netname
+    cmd += " --name #{container_name}" if named
+    cmd += " #{opts}" if opts
     cmd
+  end
+
+  def dktmprun(opts: nil)
+    cmd = dkrun_cmd(opts: "--rm -i #{opts}", labeled: false)
+    "#{cmd} #{docker_image}"
   end
 
   def container_filters_for_release
@@ -148,6 +158,12 @@ module DockDSL
     fpath = fetch(name)
     return unless fpath
     File.read(fpath)
+  end
+
+  def dklet_config_for(name)
+    p = Pathname("/dkconf/#{full_release_name}")
+    p.mkpath unless p.directory?
+    p.join(name)
   end
 
   def rendered_file_for(name, locals: {}, in_binding: binding)
@@ -228,28 +244,33 @@ module DockDSL
   end
 
   # docker networking
-  def netname
-    fetch(:netname)
-  end
-
   def register_net(name = :dailyops, build: false)
     register :netname, name
     ensure_docker_net(name) if build
   end
 
+  def netname
+    fetch(:netname)
+  end
+
   def ensure_docker_net(name, driver: :bridge)
-    # use label (not name) filter to avoid str part match
-    cmd = "docker network ls -q --filter label=#{label_pair(:name, name)}"
-    netid = `#{cmd}`.chomp
-    if netid && netid.empty?
+    unless netid = find_net(name)
       puts "create new network: #{name}"
       netid = `docker network create #{name} --label #{label_pair(:name, name)} --driver=#{driver}`
     end
     netid
   end
 
+  # use label (not name) filter to avoid str part match
+  def find_net(name)
+    cmd = "docker network ls -q --filter label=#{label_pair(:name, name)}"
+    netid = `#{cmd}`.chomp
+    return netid unless netid.empty?
+    nil
+  end
+
   def label_key(key, prefix: true)
-    prefix ? "dklet.#{key}" : key
+    prefix ? "docklet.#{key}" : key
   end
 
   # key=value pair
@@ -389,12 +410,20 @@ module Util
     # unlink清理问题：引用进程结束时自动删除？👍 
     file.path
   end
+
+  def human_timestamp(t = Time.now)
+    t.strftime("%Y%m%d%H%M%S")
+  end
 end
 
 class DockletCLI < Thor
+  #include Thor::Actions
+
   default_command :main
-  class_option :debug, type: :boolean, default: false
-  class_option :dry, type: :boolean, default: false
+  class_option :debug, type: :boolean, default: false, banner: 'in debug mode, more log'
+  class_option :dry, type: :boolean, default: false, banner: 'dry run'
+  class_option :quiet, type: :boolean, default: false, banner: 'keep quiet'
+  class_option :force, type: :boolean, default: false, banner: 'force do'
   class_option :env, banner: 'app env', aliases: ['-e']
   class_option :release, banner: 'what app release for', aliases: ['-r']
 
@@ -431,24 +460,25 @@ class DockletCLI < Thor
   option :cmd, banner: 'run command in container'
   option :opts, banner: 'docker run options'
   option :exec, type: :boolean, default: true, banner: 'first exec existed container'
-  option :allow_tmp, type: :boolean, default: true, banner: 'allow run tmp container'
+  option :tmp, type: :boolean, default: true, banner: 'allow run tmp container'
   def runsh(cid = ops_container)
     cmd = options[:cmd] || default_cmd || 'sh'
     if cid && options[:exec]
       dkcmd = "docker exec -it"
       dkcmd += " #{options[:opts]}" if options[:opts]
-      dkcmd += " #{cid} #{cmd}"
-      puts "run : #{dkcmd}" if options[:debug]
+      # todo multline commands best practice
+      dkcmd += " #{cid} sh -c '#{cmd}'"
+      puts "run : #{dkcmd}" unless options[:quiet]
       system dkcmd unless options[:dry]
       return
     end
 
-    if options[:allow_tmp]
+    if options[:tmp]
       dkcmd = "docker run --rm -it"
       dkcmd += " --network #{netname}" if netname
       dkcmd += " #{options[:opts]}" if options[:opts]
       dkcmd += " #{docker_image} #{cmd}"
-      puts "run: #{dkcmd}" if options[:debug]
+      puts "run: #{dkcmd}" unless options[:quiet]
       system dkcmd unless options[:dry]
     end
   end
@@ -483,9 +513,7 @@ class DockletCLI < Thor
     end
     puts "build command:\n  #{cmd}" if options[:debug]
 
-    unless options[:dry]
-      system cmd 
-    end
+    system cmd unless options[:dry]
   end
 
   desc 'note', 'display user notes'
@@ -545,10 +573,15 @@ class DockletCLI < Thor
   end 
 
   desc 'ps', 'ps related containers'
+  option :imaged, type: :boolean, default: false, banner: 'same image digest'
   def ps
-    system <<~Desc
-      docker ps -f ancestor=#{docker_image} -a
-    Desc
+    cmd = if options[:imaged]
+        "docker ps -f ancestor=#{docker_image} -a"
+      else
+        "docker ps #{container_filters_for_release} -a"
+      end
+    puts cmd if options[:debug]
+    system cmd unless options[:dry]
   end
 
   desc 'netup [NETNAME]', 'make networking'
@@ -559,20 +592,22 @@ class DockletCLI < Thor
   end
 
   desc 'netdown [NETNAME]', 'clean networking'
-  option :force, type: :boolean, default: false, banner: 'rm forcely'
   def netdown(net = netname)
+    puts "cleaning net: #{net}" if options[:debug]
     return unless net
+    return unless find_net(net)
 
-    safely = true
     cids = containers_in_net(net)
-    unless cids.empty?
-      if options[:force] || yes?("#{cids.size} containers linked #{net}, FORCELY remove?")
+    binded = !cids.empty?
+    if binded 
+      if options[:force] || yes?("#{cids.size} containers linked, FORCELY remove?")
         system "docker rm -f #{cids.join(' ')}"
-      else
-        safely = false
+        binded = false
       end
     end
-    if safely
+    if binded
+      puts "#{net} has binded resources, skipped"
+    else
       system "docker network rm #{net}"
       puts "network #{net} cleaned"
     end
@@ -609,30 +644,52 @@ class DockletCLI < Thor
     Desc
   end
 
-  desc 'info', 'show system info'
-  def info
-    h = {
-      script: dklet_script,
-      script_path: script_path,
-      script_name: script_name,
-      approot: approot,
-      appname: appname,
-      env: env,
-      release: app_release,
-      full_release_name: full_release_name,
-      container_name: container_name,
-      image: docker_image,
-      build_root: build_root,
-      build_net: build_net,
-      release_labels: release_label_hash,
-      network: netname,
-      voluemes_root: volumes_root,
-      app_volumes: app_volumes,
-      registry: registry
-    }
-    pp h
+  desc 'clear_app_volumes', 'clear app volumes'
+  def clear_app_volumes
+    if app_volumes.directory?
+      if options[:force] || yes?("Remove app volumes dir data?")
+        app_volumes.rmtree
+      end
+    end
   end
-  map 'inspect' => 'info'
+
+  desc 'inspect_info', 'inspect info'
+  option :image, type: :boolean, default: false, aliases: ['-i'], banner: 'inspect image'
+  option :container, type: :boolean, default: false, aliases: ['-c'], banner: 'inspect container'
+  def inspect_info
+    cmd = nil
+    if options[:image]
+      cmd = "docker inspect #{docker_image}"
+    elsif options[:container]
+      cid = containers_for_release.first || container_name || ops_container
+      cmd = "docker inspect #{cid}"
+    else
+      h = {
+        script: dklet_script,
+        script_path: script_path,
+        script_name: script_name,
+        appname: appname,
+        env: env,
+        release: app_release,
+        full_release_name: full_release_name,
+        container_name: container_name,
+        image: docker_image,
+        approot: approot,
+        build_root: build_root,
+        build_net: build_net,
+        release_labels: release_label_hash,
+        network: netname,
+        voluemes_root: volumes_root,
+        app_volumes: app_volumes,
+        dsl_methods: dsl_methods,
+        registry: registry
+      }
+      pp h
+    end
+    system cmd if cmd
+  end
+  map 'inspect' => 'inspect_info'
+  map 'info' => 'inspect_info'
 
   desc 'mock1', ''
   def mock1(time)
@@ -675,6 +732,24 @@ class DockletCLI < Thor
       (klass, task) = Thor::Util.find_class_and_command_by_namespace(task)
       klass.new.invoke(task, args, options)
     end
+
+    def container_run(cmds)
+      opts = {
+        tmp: false,
+        cmd: cmds
+      }
+      invoke :runsh, [], opts
+    end
+
+    # encapsulate run commands behaviors in system
+    def system_run(cmds, opts={})
+      unless options[:quiet]
+        puts cmds
+      end
+      unless options[:dry]
+        system cmds
+      end
+    end
   end
 end
 
@@ -685,8 +760,6 @@ end
   container_name
   ops_container
   app_volumes
-  ).each do |m|
-  DockDSL.dsl_method(m)
-end
+).each{|m| DockDSL.dsl_method(m) }
 
 extend DockDSL
