@@ -1,7 +1,12 @@
 #!/usr/bin/env rundklet
+add_note <<~Note
+  https://hub.docker.com/_/nginx/
+Note
 
+register :host_port, 18080
+
+#https://docs.docker.com/engine/reference/builder/#usage
 write_dockerfile <<~Desc
-  # ref https://docs.docker.com/engine/reference/builder/#usage
   FROM nginx:1.15-alpine
   LABEL <%=image_labels%>
   #COPY nginx.conf /etc/nginx/nginx.conf
@@ -10,34 +15,28 @@ write_dockerfile <<~Desc
 Desc
 
 task :main do
-  system <<~Desc
-    #{dkrun_cmd} -d --name dkng -p 28384:80 \
+  system_run <<~Desc
+    #{dkrun_cmd(named: true)} -d -p #{fetch(:host_port)}:80 \
       -v #{script_path}/conf/nginx.conf:/etc/nginx/nginx.conf \
       -v #{script_path}/site/html:/usr/share/nginx/html \
       #{docker_image}   
-    curl http://localhost:28384
-    docker logs -t --details dkng
-    echo http://localhost:28384
+    curl http://localhost:#{fetch(:host_port)}
+    docker logs -t --details #{container_name}
+    echo http://localhost:#{fetch(:host_port)}
   Desc
 end
 
 custom_commands do
-  desc '', ''
+  desc 'try', ''
   def try
     cname = 'dkng1'
-    system <<~Desc
-      #{dkrun_cmd} -d --name #{container_name} --name #{cname} -p 80 #{docker_image}   
+    system_run <<~Desc
+      #{dkrun_cmd} -d --name #{cname} -p 80 #{docker_image}   
       docker ps -f ancestor=#{docker_image}
       docker rm -f #{cname}
     Desc
   end
 end
-
-add_note <<~Note
-  https://hub.docker.com/_/nginx/
-  http://nginx.org/en/docs/
-  http://nginx.org/en/docs/beginners_guide.html#conf_structure
-Note
 
 __END__
 
@@ -56,8 +55,8 @@ web:
    - NGINX_HOST=foobar.com
    - NGINX_PORT=80
   command: /bin/bash -c "envsubst < /etc/nginx/conf.d/mysite.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"
- #The mysite.template file may then contain variable references like this:
- #listen ${NGINX_PORT};
+  #The mysite.template file may then contain variable references like this:
+  #listen ${NGINX_PORT};
 
 nginx -h
 nginx -T

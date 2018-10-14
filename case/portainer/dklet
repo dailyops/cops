@@ -18,7 +18,7 @@ task :main do
   invoke :netup, [], {}
 
   system <<~Desc
-    #{dkrun_cmd} -d --name #{container_name} --restart always \
+    #{dkrun_cmd(named: true)} -d --restart always \
       -e VIRTUAL_HOST=portainer.lh,p.lh \
       -v /var/run/docker.sock:/var/run/docker.sock \
       -v #{app_volumes}:/data \

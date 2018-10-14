@@ -1,0 +1,17 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  https://www.consul.io/intro/index.html
+  https://hub.docker.com/_/consul/
+Note
+
+# https://docs.docker.com/develop/develop-images/dockerfile_best-practices
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL <%=image_labels%>
+Desc
+
+task :main do
+  system <<~Desc
+    #{dktmprun} echo hi container #{container_name}
+  Desc
+end

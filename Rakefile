@@ -40,6 +40,7 @@ task :devdns do
   end
 end
 
+# todo prod-net 
 task :dailyops do
   system <<~Desc
     dklet init

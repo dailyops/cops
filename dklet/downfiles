@@ -1,0 +1,71 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  test speed of data transfer between access points
+Note
+
+register_net
+register :host_port, 18087
+register :size, '20m' # head size arg
+
+#https://docs.docker.com/engine/reference/builder/#usage
+write_dockerfile <<~Desc
+  FROM nginx:1.15-alpine
+  LABEL <%=image_labels%>
+  WORKDIR /usr/share/nginx/html
+  RUN apk add curl
+  RUN mkdir files && \
+      head -c #{fetch(:size)} </dev/urandom > files/#{fetch(:size)}
+  # dd if=/dev/zero of=files/10m bs=1M count=10
+Desc
+
+task :main do
+  system_run <<~Desc
+    #{dkrun_cmd(named: true)} -d -p #{fetch(:host_port)}:80 #{docker_image}   
+  Desc
+  invoke :down, [fetch(:size)], []
+end
+
+custom_commands do
+  desc 'down', 'down files with the client'
+  option :client, default: 'curl', banner: 'download client', aliases: ['-c']
+  def down(file = '50m')
+    invoke :mock, [file], []
+    client = options[:client]
+    puts "==use #{client} client"
+    acmd = 'curl -o /dev/null'
+    case client
+    when 'wget'
+      acmd = 'wget -O /dev/null'
+    end
+    system_run <<~Desc
+      echo ==from container in same docker network
+      #{dktmprun} time #{acmd} http://#{container_name}/files/#{file}
+      echo ==from container itself
+      time docker exec -t #{container_name} #{acmd} http://localhost/files/#{file}
+      echo ==from host mapping port
+      time #{acmd} http://localhost:#{fetch(:host_port)}/files/#{file}
+    Desc
+    invoke :files, [], {}
+  end
+
+  desc 'mock', 'mock a file with size in M'
+  def mock(size = '20m')
+    container_run <<~Desc
+      cd /usr/share/nginx/html/files
+      if [ -f #{size} ]; then
+        echo already existed #{size}
+      else
+        head -c #{size} </dev/urandom > #{size}
+      fi
+    Desc
+    # dd if=/dev/zero of=files/10m bs=1M count=10
+  end
+
+  desc 'files', 'list downloadable files'
+  def files
+    container_run <<~Desc
+      ls -l /usr/share/nginx/html/files
+    Desc
+  end
+  map 'ls' => 'files'
+end

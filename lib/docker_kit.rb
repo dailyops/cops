@@ -2,8 +2,8 @@ ENV['BUNDLE_GEMFILE'] ||= File.expand_path('../Gemfile', __dir__)
 require 'bundler/setup'
 Bundler.require :default
 require 'byebug'
-require 'tempfile'
 require 'erb'
+require_relative 'util'
 
 module DockDSL
   def self.registry
@@ -142,8 +142,12 @@ module DockDSL
     Pathname(__dir__)
   end
 
+  def dklet_home
+    dklet_lib_path.join('..')
+  end
+
   def dklet_tmp_path
-    dklet_lib_path.join('../tmp')
+    dklet_home.join('tmp')
   end
   
   def set_file_for(name, str)
@@ -379,10 +383,12 @@ module DockDSL
   end
 
   def volumes_root
-    root = fetch(:volumes_root) || if File.directory?('/Volumes')
-        '/Volumes/docker' # File sharing with Docker for Mac
+    vols_root = "#{ENV['HOME']}/DockerVolumes"
+    root = fetch(:volumes_root) || if File.directory?(vols_root)
+        # friendly to File sharing on Docker for Mac
+        vols_root
       else
-        '/docker-volumes'
+        '~/docker-volumes'
       end
     Pathname(root)
   end
@@ -397,22 +403,6 @@ module DockDSL
 
   def default_cmd
     fetch(:default_cmd)
-  end
-end
-
-module Util
-  module_function
-
-  def tmpfile_for(str, prefix: 'kc-tmp')
-    file = Tempfile.new(prefix)
-    file.write str
-    file.close # save to disk
-    # unlink清理问题：引用进程结束时自动删除？👍 
-    file.path
-  end
-
-  def human_timestamp(t = Time.now)
-    t.strftime("%Y%m%d%H%M%S")
   end
 end
 
@@ -467,7 +457,7 @@ class DockletCLI < Thor
       dkcmd = "docker exec -it"
       dkcmd += " #{options[:opts]}" if options[:opts]
       # todo multline commands best practice
-      dkcmd += " #{cid} sh -c '#{cmd}'"
+      dkcmd += " #{cid} sh #{'-x' unless options[:quiet]} -c '#{cmd}'"
       puts "run : #{dkcmd}" unless options[:quiet]
       system dkcmd unless options[:dry]
       return
@@ -477,7 +467,7 @@ class DockletCLI < Thor
       dkcmd = "docker run --rm -it"
       dkcmd += " --network #{netname}" if netname
       dkcmd += " #{options[:opts]}" if options[:opts]
-      dkcmd += " #{docker_image} #{cmd}"
+      dkcmd += " #{docker_image} sh #{'-x' unless options[:quiet]} -c '#{cmd}'"
       puts "run: #{dkcmd}" unless options[:quiet]
       system dkcmd unless options[:dry]
     end
@@ -488,7 +478,7 @@ class DockletCLI < Thor
   option :opts, banner: 'run extra options'
   def daemon
     invoke :build, [], {}
-    system "docker run --detach #{options[:opts]} #{docker_image}" unless options[:dry]
+    system "docker run -d #{options[:opts]} #{docker_image}" unless options[:dry]
   end
 
   desc 'build', 'build image'
@@ -733,11 +723,9 @@ class DockletCLI < Thor
       klass.new.invoke(task, args, options)
     end
 
-    def container_run(cmds)
-      opts = {
-        tmp: false,
-        cmd: cmds
-      }
+    def container_run(cmds, opts = nil)
+      cmds = cmds.join("\n") if cmds.is_a?(Array)
+      opts = (opts||{}).merge(cmd: cmds).merge(options.slice('quiet', 'dry'))
       invoke :runsh, [], opts
     end
 

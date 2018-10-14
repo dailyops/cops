@@ -4,10 +4,7 @@ add_note <<~Note
   https://hub.docker.com/_/ubuntu/
 Note
 
-write_dockerfile <<~Desc
-  FROM ubuntu:18.04
-  LABEL <%=image_labels%>
-Desc
+register_docker_image "ubuntu:18.04"
 
 task :main do
   system <<~Desc

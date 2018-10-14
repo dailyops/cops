@@ -15,9 +15,16 @@ https://www.vaultproject.io/docs/commands/index.html
 * token auth method is builtin and can not be disabled
 * if restart vault, require do unseal and login again
 
-## practice
+## todo
 
 * how to generate secret on the fly
+* how to use in app, vaultenv? https://github.com/channable/vaultenv 
+* github use
+* lease test 
+* how to backup and restore?
+* vault agent auto-auth try https://www.vaultproject.io/docs/agent/index.html
+
+## notes
 
 / # vault status
 Error checking seal status: Get https://127.0.0.1:8200/v1/sys/seal-status: http: server gave HTTP response to HTTPS client
@@ -74,5 +81,7 @@ vault auth enable -path=github github
 vault path-help auth/github # note: with auth/ prefix
 
 UI
-https://github.com/adobe/cryptr
+https://github.com/Caiyeon/goldfish
+good
 
+https://github.com/adobe/cryptr

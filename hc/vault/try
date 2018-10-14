@@ -4,26 +4,43 @@ add_note <<~Note
 Note
 
 register_docker_image "vault:0.11.1"
-register :dev_host_port, 18200
+register :host_port, 18200
+register :root_token, 'root'
+require_relative 'rubyclient-ext'
 
 task :main do
   # SKIP_SETCAP to skip setcap Memory Locking
   #-e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:1234'
   #-e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' 
-  cmd = <<~Desc
+  system_run <<~Desc
     #{dkrun_cmd(named: true)} -d \
       --cap-add=IPC_LOCK \
       -e VAULT_ADDR='http://0.0.0.0:8200' \
-      -p #{fetch(:dev_host_port)}:8200 \
-      #{docker_image} server -dev -dev-root-token-id=root
+      -p #{fetch(:host_port)}:8200 \
+      #{docker_image} server -dev -dev-root-token-id=#{fetch(:root_token)}
   Desc
   # disable_mlock: true
-  puts cmd if options[:debug]
-  system cmd unless options[:dry]
 end
 
 custom_commands do
-  desc 'test', 'test vault'
-  def test
+  desc 'server_info', 'show server config info'
+  def server_info
+    h = {
+      address: host_uri,
+      config: {
+        root_token: get_root_token
+      }
+    }
+    puts h.to_json
+  end
+
+  no_commands do
+    def host_uri
+      "http://localhost:#{fetch(:host_port)}"
+    end
+    
+    def get_root_token
+      fetch(:root_token)
+    end
   end
 end

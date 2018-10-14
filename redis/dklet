@@ -12,11 +12,7 @@ Note
 register_net
 register :appname, 'redis'
 register_default_cmd "redis-cli -h #{container_name}"
-
-write_dockerfile <<~Desc
-  FROM redis:4.0-alpine
-  LABEL <%=image_labels%>
-Desc
+register_docker_image "redis:4.0-alpine"
 
 task :main do
   system <<~Desc
@@ -38,11 +34,9 @@ custom_commands do
 
   desc 'test', 'test redis-cli commands'
   def test
-    system <<~Desc
-      #{dkrun_cmd} --rm -i \
-        #{docker_image} redis-cli -h #{container_name} set tname geek
-      #{dkrun_cmd} --rm -i \
-        #{docker_image} redis-cli -h #{container_name} get tname
+    container_run <<~Desc, exec: false
+      redis-cli -h #{container_name} set tname geek
+      redis-cli -h #{container_name} get tname
     Desc
   end
 end

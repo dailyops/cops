@@ -1,0 +1,33 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  Nessus vulnerability scanner
+  https://www.tenable.com/products/nessus/nessus-professional
+Note
+
+register_net
+# require activation code to request
+#register_docker_image "mikenowak/nessus"
+register_docker_image "treadie/nessus"
+register :host_port, 18834
+
+task :main do
+  system <<~Desc
+    #{dkrun_cmd(named: true)} -d -p #{fetch(:host_port)}:8834 \
+      -e VIRTUAL_HOST=nessus.lh \
+      -v #{app_volumes}:/opt/nessus/etc/nessus/ \
+      #{docker_image}
+  Desc
+end
+
+# register a code
+# https://www.tenable.com/products/nessus/activation-code
+# docker exec -i /opt/nessus/sbin/nessuscli fetch --register $LICENCE
+# Update plugins via cmd line
+#docker exec -i /opt/nessus/sbin/nessuscli update --plugins-only
+
+custom_commands do
+  desc 'open', ''
+  def open
+    system_run "open https://localhost:#{fetch(:host_port)}"
+  end
+end

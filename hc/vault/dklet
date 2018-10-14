@@ -5,8 +5,10 @@ add_note <<~Note
   https://www.melvinvivas.com/secrets-management-using-docker-hashicorp-vault/
 Note
 
+register_net
 register_docker_image "vault:0.11.1"
 register :host_port, 28200
+require_relative 'rubyclient-ext'
 
 task :main do
   #-e 'VAULT_LOCAL_CONFIG={"backend": {"file": {"path": "/vault/file"}}, ...}' 
@@ -22,31 +24,34 @@ task :main do
 end
 
 custom_commands do
-  # hot to get authenticated/login status
-  
   desc 'try', 'try command after login'
+  option :query, type: :boolean, default: true, banner: 'just query'
   def try
-    container_run <<~Desc
+    cmds = []
+    cmds << <<~Desc unless options[:query]
       vault kv put secret/try name=geek-#{::Util.human_timestamp}
+    Desc
+    cmds << <<~Desc
       vault kv get secret/try
       vault kv get -field name secret/try
     Desc
+    container_run cmds
+  end
+
+  desc 'login', 'login as root'
+  def login
+    # hot to get authenticated/login status
+    container_run <<~Desc
+      vault login #{conf_hash['root_token']}
+    Desc
   end
   
-  desc 'login', 'unseal and login after start'
-  def login
+  desc 'unseal', 'unseal after init'
+  def unseal
     container_run <<~Desc
       vault status
       vault operator unseal #{conf_hash['keys'].first}
-      vault login #{conf_hash['root_token']}
       vault status
-    Desc
-  end
-
-  desc 'init_stats', 'query init status'
-  def init_status
-    system <<~Desc
-      curl #{host_uri}/v1/sys/init
     Desc
   end
 
@@ -61,6 +66,12 @@ custom_commands do
         abort "#{keysfile} existed!"
       end
     end
+    ## ways to init vault server
+    #// way1: cmd
+    #vault operator init -key-shares=1 -key-threshold=1
+    #// way2: api
+    #// way3: web, it will hint to init if not
+    #open http://localhost:8200/ui/
     # avoid {"errors":["Vault is already initialized"]}???
     system <<~Desc
       curl --request POST \
@@ -69,11 +80,10 @@ custom_commands do
     Desc
   end
 
-  desc 'keys', 'show keys info'
-  def keys
+  desc 'init_stats', 'query init status'
+  def init_status
     system <<~Desc
-      echo keys file in #{keysfile}
-      cat #{keysfile}
+      curl #{host_uri}/v1/sys/init
     Desc
   end
 
@@ -84,36 +94,41 @@ custom_commands do
     Desc
   end
 
-  no_commands do
-    def keysfile
-      dklet_config_for("init-keys.json") 
-    end
+  desc 'server_info', 'show server config info'
+  def server_info
+    h = {
+      address: host_uri,
+      config: conf_hash,
+      keysfile: keysfile
+    }
+    puts h.to_json
+  end
 
+  desc 'hclient', 'connet with host client'
+  def hclient
+    system_run <<~Desc
+      export VAULT_ADDR=#{host_uri}
+      vault login #{get_root_token}
+      vault kv get secret/try
+    Desc
+  end
+
+  no_commands do
     def host_uri
       "http://localhost:#{fetch(:host_port)}"
+    end
+
+    def keysfile
+      dklet_config_for("init-keys.json") 
     end
 
     def conf_hash
       require 'json'
       JSON.parse File.read(keysfile)
     end
+    
+    def get_root_token
+      conf_hash['root_token']
+    end
   end
 end
-
-__END__
-
-## ways to init vault server
-
-// way1: cmd
-vault operator init -key-shares=1 -key-threshold=1
-
-// way2: api
-curl \
-    --request POST \
-    --data '{"secret_shares": 1, "secret_threshold": 1}' \
-    http://127.0.0.1:8200/v1/sys/init
-
-// way3: web
-open http://localhost:8200/ui/
-it will hint to init if not
-
