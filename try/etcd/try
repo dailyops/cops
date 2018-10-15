@@ -1,0 +1,10 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  https://coreos.com/etcd/
+Note
+
+task :main do
+  system <<~Desc
+    # todo
+  Desc
+end

@@ -30,7 +30,7 @@ end
 
 task :main do
   system <<~Desc
-    #{dkrun_cmd} -d --name #{container_name} -p :5432 \
+    #{dkrun_cmd(named: true)} -d --restart always -p :5432 \
       -e POSTGRES_PASSWORD=#{fetch(:initpassword)} \
       -v "#{script_path}/conf/postgresql.conf":/etc/postgresql/postgresql.conf \
       -v "#{app_volumes}":/var/lib/postgresql/data \

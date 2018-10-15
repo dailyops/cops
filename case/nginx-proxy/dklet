@@ -59,3 +59,9 @@ custom_commands do
   end
 end
 
+
+__END__
+
+https://github.com/jwilder/nginx-proxy#multiple-ports
+VIRTUAL_PORT 
+VIRTUAL_HOST

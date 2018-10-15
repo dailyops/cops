@@ -32,8 +32,17 @@ write_dockerfile <<~Desc
 Desc
 
 task :main do
-  system <<~Desc
-    #{dktmprun} echo hi container #{container_name}
+  system_run <<~Desc
+    #{dkrun_cmd(named: true)} -d #{docker_image}
     # #{compose_cmd} up -d
   Desc
+end
+
+custom_commands do
+  desc 'try', 'try'
+  def try
+    system_run <<~Desc
+      #{dktmprun} echo hi container #{container_name}
+    Desc
+  end
 end

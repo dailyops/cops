@@ -1,0 +1,7 @@
+{"check":
+  {
+    "name": "ping",
+    "args": ["ping", "-c1", "localhost"], 
+    "interval": "30s"
+  }
+}
