@@ -49,6 +49,7 @@ task :dailyops do
     gemstash/dklet
     pg/dklet -e prod
     redis/dklet -e prod
+    hc/vault/dklet
   Desc
   Rake::Task[:devdns].invoke
 end

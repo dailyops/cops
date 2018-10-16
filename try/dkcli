@@ -1,0 +1,56 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  familar with docker cli
+Note
+
+# https://docs.docker.com/develop/develop-images/dockerfile_best-practices
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL <%=image_labels%>
+  RUN echo build at `date` > /tmp/build_at
+Desc
+
+task :main do
+  system_run <<~Desc
+    #{dkrun_cmd(named: true)} -d \
+      #{docker_image} ping localhost
+  Desc
+end
+
+custom_commands do
+  desc 'transfer_container', ''
+  def transfer_container
+    export_file = "#{container_name}-export.tar"
+    img = "#{full_release_name}:imported"
+    system_run <<~Desc
+      docker export --output="#{export_file}" #{container_name}
+      # Import the contents from a tarball to create a filesystem image
+      # LOSE some metadata info(check with docker inspect)
+      docker import #{export_file} #{img}
+      docker run -t --rm #{img} cat /tmp/build_at
+      rm -f #{export_file} 
+      docker rmi #{img}
+    Desc
+  end
+
+  ## groups of docker cli
+  # distribute flow, ops.
+  # build, commit, pull, push, save, load, export, import, rmi
+  # login, logout, search
+
+  # base assets mgnt
+  # images, checkpoint, container, image, network, node, plugin,
+  # system, trust, volume
+
+  # container running mgnt
+  # create, attach, cp, create, exec, kill
+  # pause, rename, restart, rm, run, start, stop
+  # tag, top, update, unpause, wait
+
+  # container trace/info
+  # diff, events, history, info, inspect
+  # logs, port, ps, version
+  
+  # cluster(swarm) 
+  # deploy, stack, swarm, secret, service, config
+end

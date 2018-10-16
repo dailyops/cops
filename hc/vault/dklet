@@ -17,10 +17,16 @@ task :main do
       --cap-add=IPC_LOCK \
       -p #{fetch(:host_port)}:8200 \
       -e VAULT_ADDR='http://0.0.0.0:8200' \
+      -e VIRTUAL_HOST=vault.lh \
+      -e VIRTUAL_PORT=8200 \
       -v #{script_path}/config.hcl:/vault/config/config.hcl \
       -v #{app_volumes}:/vault/file \
       #{docker_image} server
   Desc
+  
+  # check init status??
+  sleep 1
+  invoke :unseal, [], {}
 end
 
 custom_commands do
@@ -49,9 +55,8 @@ custom_commands do
   desc 'unseal', 'unseal after init'
   def unseal
     container_run <<~Desc
-      vault status
       vault operator unseal #{conf_hash['keys'].first}
-      vault status
+      #vault status
     Desc
   end
 
@@ -101,8 +106,10 @@ custom_commands do
       config: conf_hash,
       keysfile: keysfile
     }
-    puts h.to_json
+    #puts h.to_json
+    pp h
   end
+  map 'keys' => 'server_info'
 
   desc 'hclient', 'connet with host client'
   def hclient

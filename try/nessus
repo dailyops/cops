@@ -4,14 +4,11 @@ add_note <<~Note
   https://www.tenable.com/products/nessus/nessus-professional
 Note
 
-register_net
-# require activation code to request
-#register_docker_image "mikenowak/nessus"
 register_docker_image "treadie/nessus"
-register :host_port, 18834
+register :host_port, 8834
 
-task :main do
-  system <<~Desc
+task :main, preclean: false do
+  system_run <<~Desc
     #{dkrun_cmd(named: true)} -d -p #{fetch(:host_port)}:8834 \
       -e VIRTUAL_HOST=nessus.lh \
       -v #{app_volumes}:/opt/nessus/etc/nessus/ \
@@ -19,15 +16,29 @@ task :main do
   Desc
 end
 
-# register a code
-# https://www.tenable.com/products/nessus/activation-code
-# docker exec -i /opt/nessus/sbin/nessuscli fetch --register $LICENCE
-# Update plugins via cmd line
-#docker exec -i /opt/nessus/sbin/nessuscli update --plugins-only
-
 custom_commands do
   desc 'open', ''
   def open
     system_run "open https://localhost:#{fetch(:host_port)}"
   end
 end
+
+__END__
+
+* register a code (Home, scan 16ips)
+  https://www.tenable.com/products/nessus/activation-code
+* start image
+  Processing the Nessus plugins...
+  [##################                        ]
+  slow to download plugins..., require Fanqiang also
+  about 5+G container after export on jianguo's mac
+  idea todo: install on GCP
+* account: admin/admin
+
+# Update plugins via cmd line
+docker exec -i /opt/nessus/sbin/nessuscli update --plugins-only
+
+## use exported image from jianguo
+dk run -d --name jianguo-nessus -p8834:8834 9259e4499a20 /opt/nessus/sbin/nessusd
+
+Scans originating from this scanner can not be viewed locally. To review, export the current results and import them into your Tenable.io account.
