@@ -9,20 +9,12 @@ https://www.vaultproject.io/docs/commands/index.html
 
 ## core concepts
 
-* root token just a special client token
-* unseal keys is splited parts of a master key
+* root token just a special client token with init super admin permissions
+* unseal keys are splited parts of a master key used to unseal data store after start/restart
 * to use a vault server, require in unsealed state, then vault login with your client token
 * token auth method is builtin and can not be disabled
 * if restart vault, require do unseal and login again
-
-## todo
-
-* how to generate secret on the fly
-* how to use in app, vaultenv? https://github.com/channable/vaultenv 
-* github use
-* lease test 
-* how to backup and restore?
-* vault agent auto-auth try https://www.vaultproject.io/docs/agent/index.html
+* Vault supports many auth methods, but they must be enabled before use
 
 ## notes
 
@@ -39,7 +31,6 @@ Total Shares    1
 or 
 vault status -address http://0.0.0.0:18200
 vault login -address http://0.0.0.0:18200
-
 
 / # vault kv put secret/try name=cao
 Error making API request.
@@ -59,7 +50,6 @@ dev server
 https://www.vaultproject.io/intro/getting-started/dev-server.html
 The dev server is a built-in, pre-configured server that is not very secure but useful for playing with Vault locally.
 
-
 ops
 
 vault kv put secret/hello name=v1
@@ -69,6 +59,7 @@ vault kv get -field name sceret/hello # v2
 vault kv dlete secret/hello
 
 # list secret engines
+
 vault secrets list
 vault secrets enable -path=aws aws
 vault path-help aws/
@@ -77,6 +68,7 @@ vault secrets diable aws/
 vault path-help secret/
 
 # list auth methods
+
 vault auth enable -path=github github
 vault path-help auth/github # note: with auth/ prefix
 

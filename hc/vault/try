@@ -3,26 +3,47 @@ add_note <<~Note
   try in server dev mode
 Note
 
-register_docker_image "vault:0.11.1"
+register_net
 register :host_port, 18200
 register :root_token, 'root'
-require_relative 'rubyclient-ext'
+require_relative 'shared'
+
+write_dockerfile <<~Desc
+  FROM vault:0.11.1
+  LABEL <%%=image_labels%>
+  RUN apk add curl
+Desc
 
 task :main do
   # SKIP_SETCAP to skip setcap Memory Locking
   #-e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:1234'
   #-e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' 
+  #-e VIRTUAL_PORT=8200 
   system_run <<~Desc
     #{dkrun_cmd(named: true)} -d \
       --cap-add=IPC_LOCK \
+      -e VIRTUAL_HOST=vault.dev.lh \
       -e VAULT_ADDR='http://0.0.0.0:8200' \
+      -e VAULT_DEV_LISTEN_TLS_DISABLE=1 \
       -p #{fetch(:host_port)}:8200 \
-      #{docker_image} server -dev -dev-root-token-id=#{fetch(:root_token)}
+      #{docker_image} server -dev \
+        -dev-root-token-id=#{fetch(:root_token)}
   Desc
   # disable_mlock: true
 end
 
 custom_commands do
+  # https://www.vaultproject.io/api/system/tools.html
+  desc '', ''
+  def random(bs = 3)
+    container_run <<~Desc
+      echo '{"format": "hex"}' > data.json
+      curl --header "X-Vault-Token: #{get_root_token}" -X POST \
+        --data @data.json \
+        http://#{container_name}:8200/v1/sys/tools/random/#{bs}
+    Desc
+  end
+
   desc 'server_info', 'show server config info'
   def server_info
     h = {

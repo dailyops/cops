@@ -1,0 +1,52 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  run multiple-lines command in container
+  use volume not ideal
+Note
+
+# https://docs.docker.com/develop/develop-images/dockerfile_best-practices
+write_dockerfile <<~Desc
+  FROM alpine:3.7
+  LABEL <%=image_labels%>
+Desc
+
+task :main do
+  system_run <<~Desc
+    #{dkrun_cmd(named: true)} -d #{docker_image} sleep 1d
+  Desc
+end
+
+custom_commands do
+  desc 'cprun', ''
+  def cprun
+    run_cmds_in container_name, <<~Desc
+      echo 'hi'
+      date
+      echo =="end of cmd"
+    Desc
+  end
+
+  desc 'tmp', ''
+  def tmp
+    cid = `docker run -d #{docker_image} sleep 2d`.chomp
+    run_cmds_in cid, <<~Desc
+      echo 'hi'
+      date
+      echo =="end of cmd"
+    Desc
+    system <<~Desc
+      docker rm -f #{cid}
+    Desc
+  end
+
+  no_commands do
+    def run_cmds_in(cid, cmds)
+      tfile = ::Util.tmpfile_for cmds
+      dst_file = "/tmp/dklet-#{File.basename(tfile)}-#{rand(10000)}"
+      system <<~Desc
+        docker cp #{tfile} #{cid}:#{dst_file}
+        docker exec -t #{cid} sh -c 'sh #{dst_file} && rm -f #{dst_file}'
+      Desc
+    end
+  end
+end

@@ -1,9 +1,25 @@
 add_note <<~Note
-  test ruby client to use vault
+  ruby client to use vault
   https://github.com/hashicorp/vault-ruby
 Note
 
 custom_commands do
+  desc 'ui', 'open web'
+  def ui
+    # dev mode auto config
+    system <<~Desc
+      open "#{host_uri}/ui/"
+    Desc
+  end
+
+  desc 'login', 'login as root'
+  def login
+    # hot to get authenticated/login status
+    container_run <<~Desc
+      vault login #{conf_hash['root_token']}
+    Desc
+  end
+
   desc 'rclient', ''
   def rclient
     init_rubyclient

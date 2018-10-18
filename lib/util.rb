@@ -14,8 +14,4 @@ module Util
   def human_timestamp(t = Time.now)
     t.strftime("%Y%m%d%H%M%S")
   end
-
-  ## secret util
-  #todo
-
 end

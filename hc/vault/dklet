@@ -6,9 +6,14 @@ add_note <<~Note
 Note
 
 register_net
-register_docker_image "vault:0.11.1"
 register :host_port, 28200
-require_relative 'rubyclient-ext'
+require_relative 'shared'
+
+write_dockerfile <<~Desc
+  FROM vault:0.11.1
+  LABEL <%%=image_labels%>
+  RUN apk add curl
+Desc
 
 task :main do
   #-e 'VAULT_LOCAL_CONFIG={"backend": {"file": {"path": "/vault/file"}}, ...}' 
@@ -43,14 +48,6 @@ custom_commands do
     Desc
     container_run cmds
   end
-
-  desc 'login', 'login as root'
-  def login
-    # hot to get authenticated/login status
-    container_run <<~Desc
-      vault login #{conf_hash['root_token']}
-    Desc
-  end
   
   desc 'unseal', 'unseal after init'
   def unseal
@@ -80,8 +77,8 @@ custom_commands do
     # avoid {"errors":["Vault is already initialized"]}???
     system <<~Desc
       curl --request POST \
-      --data '{"secret_shares": 1, "secret_threshold": 1}' \
-      #{host_uri}/v1/sys/init > #{keysfile}
+        --data '{"secret_shares": 1, "secret_threshold": 1}' \
+        #{host_uri}/v1/sys/init > #{keysfile}
     Desc
   end
 
@@ -92,22 +89,19 @@ custom_commands do
     Desc
   end
 
-  desc 'ui', 'open web'
-  def ui
-    system <<~Desc
-      open "#{host_uri}/ui/"
-    Desc
-  end
-
   desc 'server_info', 'show server config info'
+  option :json, type: :boolean, default: false, aliases: ['-j']
   def server_info
     h = {
       address: host_uri,
       config: conf_hash,
       keysfile: keysfile
     }
-    #puts h.to_json
-    pp h
+    if options[:json]
+      puts h.to_json
+    else
+      pp h
+    end
   end
   map 'keys' => 'server_info'
 

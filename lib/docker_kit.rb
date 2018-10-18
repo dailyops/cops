@@ -449,27 +449,41 @@ class DockletCLI < Thor
   desc 'runsh [CONTAINER]', 'run into container'
   option :cmd, banner: 'run command in container'
   option :opts, banner: 'docker run options'
-  option :exec, type: :boolean, default: true, banner: 'first exec existed container'
-  option :tmp, type: :boolean, default: true, banner: 'allow run tmp container'
+  option :tmp, type: :boolean, default: false, banner: 'allow run tmp container'
   def runsh(cid = ops_container)
-    cmd = options[:cmd] || default_cmd || 'sh'
-    if cid && options[:exec]
-      dkcmd = "docker exec -it"
-      dkcmd += " #{options[:opts]}" if options[:opts]
-      # todo multline commands best practice
-      dkcmd += " #{cid} sh #{'-x' unless options[:quiet]} -c '#{cmd}'"
-      puts "run : #{dkcmd}" unless options[:quiet]
-      system dkcmd unless options[:dry]
-      return
-    end
-
-    if options[:tmp]
-      dkcmd = "docker run --rm -it"
+    tmprun = options[:tmp]
+    if tmprun
+      dkcmd = "docker run -t -d" 
       dkcmd += " --network #{netname}" if netname
       dkcmd += " #{options[:opts]}" if options[:opts]
-      dkcmd += " #{docker_image} sh #{'-x' unless options[:quiet]} -c '#{cmd}'"
-      puts "run: #{dkcmd}" unless options[:quiet]
-      system dkcmd unless options[:dry]
+      cid = `#{dkcmd} #{docker_image} sleep 3d`.chomp
+      puts "==run tmp container: #{cid}" unless options[:quiet]
+    end
+
+    abort "No container found!" unless cid
+
+    cmd = options[:cmd] || default_cmd || 'sh'
+    puts "run : #{cmd}" unless options[:quiet]
+
+    if cmd == 'sh' # simple case
+      cmds = <<~Desc
+        docker exec -it #{options[:opts]} #{cid} #{cmd}
+      Desc
+    else
+      tfile = ::Util.tmpfile_for cmd
+      dst_file = "/tmp/dklet-#{File.basename(tfile)}-#{rand(10000)}"
+      cmds = <<~Desc
+        docker cp #{tfile} #{cid}:#{dst_file}
+        docker exec -it #{options[:opts]} #{cid} sh -c 'sh #{dst_file} && rm -f #{dst_file}'
+      Desc
+    end
+    puts cmds if options[:debug]
+    system cmds unless options[:dry]
+
+    if tmprun
+      system <<~Desc
+        docker rm -f #{cid}
+      Desc
     end
   end
   map "sh" => :runsh
