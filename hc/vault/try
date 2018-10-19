@@ -34,13 +34,28 @@ end
 
 custom_commands do
   # https://www.vaultproject.io/api/system/tools.html
-  desc '', ''
+  desc 'random', ''
   def random(bs = 3)
     container_run <<~Desc
-      echo '{"format": "hex"}' > data.json
+      #echo '{"format": "hex"}' > payload.json
+      echo '{"format": "base64"}' > payload.json
       curl --header "X-Vault-Token: #{get_root_token}" -X POST \
-        --data @data.json \
+        --data @payload.json \
         http://#{container_name}:8200/v1/sys/tools/random/#{bs}
+      rm payload.json
+    Desc
+  end
+
+  desc 'hash', ''
+  def hash
+    container_run <<~Desc
+      echo '{"input": "Jfky"}' > payload.json
+      curl \
+        --header "X-Vault-Token: #{get_root_token}" \
+        --request POST \
+        --data @payload.json \
+        http://#{container_name}:8200/v1/sys/tools/hash/sha2-512
+      rm payload.json
     Desc
   end
 

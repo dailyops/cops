@@ -472,12 +472,13 @@ class DockletCLI < Thor
     else
       tfile = ::Util.tmpfile_for cmd
       dst_file = "/tmp/dklet-#{File.basename(tfile)}-#{rand(10000)}"
+      # todo user permissions for pg
       cmds = <<~Desc
-        docker cp #{tfile} #{cid}:#{dst_file}
+        docker cp --archive #{tfile} #{cid}:#{dst_file}
         docker exec -it #{options[:opts]} #{cid} sh -c 'sh #{dst_file} && rm -f #{dst_file}'
       Desc
     end
-    puts cmds if options[:debug]
+    puts cmds unless options[:quiet]
     system cmds unless options[:dry]
 
     if tmprun

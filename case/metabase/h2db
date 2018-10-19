@@ -1,0 +1,32 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  try use default H2 db
+Note
+
+register_net
+
+write_dockerfile <<~Desc
+  FROM metabase/metabase:v0.30.4
+  LABEL <%=image_labels%>
+Desc
+
+task :main do
+  system_run <<~Desc
+    #{dkrun_cmd(named: true)} -d \
+      -p 3000 \
+      -e VIRTUAL_HOST=bi.h2.lh \
+      -e "JAVA_TIMEZONE=Asia/Shanghai" \
+      -e MB_DB_FILE=/metabase-data/metabase.db \
+      -v #{app_volumes}:/metabase-data \
+      #{docker_image}
+  Desc
+end
+
+custom_commands do
+  desc 'open', ''
+  def open
+    system_run <<~Desc
+      open http://bi.h2.lh
+    Desc
+  end
+end
