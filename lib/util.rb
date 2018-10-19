@@ -1,4 +1,5 @@
 require 'tempfile'
+require 'socket'
 
 module Util
   module_function
@@ -13,5 +14,9 @@ module Util
 
   def human_timestamp(t = Time.now)
     t.strftime("%Y%m%d%H%M%S")
+  end
+
+  def host_ip
+    Socket.ip_address_list.find { |ai| ai.ipv4? && !ai.ipv4_loopback? }.ip_address
   end
 end

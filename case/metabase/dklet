@@ -10,6 +10,7 @@ Note
 
 register_net
 register :appname, 'metabase'
+register :host_port, 23000
 
 write_dockerfile <<~Desc
   FROM metabase/metabase:v0.30.4
@@ -20,7 +21,7 @@ Desc
 task :main do
   system_run <<~Desc
     #{dkrun_cmd(named: true)} -d --restart=always \
-      -p 3000 \
+      -p #{fetch(:host_port)}:3000 \
       -e MB_DB_CONNECTION_URI=postgres://postgres:password@prod_pg_default:5432/metabase \
       -e "JAVA_TIMEZONE=Asia/Shanghai" \
       -e VIRTUAL_HOST=metabase.lh,bi.lh \
@@ -30,9 +31,16 @@ end
 
 custom_commands do
   desc 'open', ''
+  option :local, type: :boolean, default: true
   def open
+    host = 'bi.lh'
+    host = "#{::Util.host_ip}:#{fetch(:host_port)}" unless options[:local]
+    if options[:dry]
+      puts "http://#{host}" 
+      return
+    end
     system_run <<~Desc
-      open http://bi.lh
+      open http://#{host}
     Desc
   end
 end

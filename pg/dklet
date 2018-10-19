@@ -9,8 +9,7 @@ register :dbapassword,  'dbapassword'
 
 write_dockerfile <<~Desc
   FROM postgres:9.6-alpine
-  LABEL <%=image_labels%> \
-        release=#{app_release}
+  LABEL <%=image_labels%>
   USER postgres
   ADD entrypoint-initdb.d /docker-entrypoint-initdb.d
 Desc
@@ -30,7 +29,7 @@ end
 
 task :main do
   system <<~Desc
-    #{dkrun_cmd(named: true)} -d --restart always -p :5432 \
+    #{dkrun_cmd(named: true)} -d --restart always -p #{host_port}:5432 \
       -e POSTGRES_PASSWORD=#{fetch(:initpassword)} \
       -v "#{script_path}/conf/postgresql.conf":/etc/postgresql/postgresql.conf \
       -v "#{app_volumes}":/var/lib/postgresql/data \
@@ -100,6 +99,17 @@ custom_commands do
     invoke :runsh, [], {exec: false, cmd: "psql -c 'show work_mem' postgres://postgres:#{pswd1}@#{cname}/postgres"}
     ## ok, keep old init password 
     #invoke :runsh, [], {exec: false, cmd: "psql -c 'show work_mem' postgres://postgres:#{pswd}@#{cname}/postgres"}
+  end
+  
+  no_commands do
+    def host_port
+      case env
+      when 'prod'
+        '15432' 
+      else
+        '25432' 
+      end
+    end
   end
 end
 
