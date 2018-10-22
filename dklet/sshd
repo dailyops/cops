@@ -11,8 +11,6 @@ add_note <<~Note
   apt install -y sshpass #use password auth in cli
 Note
 
-register_ops "sshtest"
-
 write_dockerfile <<~Desc
   FROM ubuntu:18.04
   LABEL <%=image_labels%>
@@ -30,8 +28,13 @@ write_dockerfile <<~Desc
 Desc
 
 task :main do
+  port = 18022
   system <<~Desc
-    #{dkrun_cmd} -d --name #{container_name} -p 8022:22 #{docker_image}
-    echo "ssh -p 8022 root@ssh.server.test.lh # with password: root"
+    #{dkrun_cmd(named: true)} -d -p #{port}:22 #{docker_image}
+    # with password: root"
+    ssh -p #{port} \
+      -o PreferredAuthentications=password \
+      -o StrictHostKeyChecking=no \
+      root@#{domain_for('ssh-server.docker')}
   Desc
 end

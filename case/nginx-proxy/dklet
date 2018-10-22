@@ -10,14 +10,13 @@ add_note <<~Note
 Note
 
 register_net
-register_ops "nginx-proxy"
 
 write_specfile <<~Desc
   version: '2'
   services:
     nginx-proxy:
       image: jwilder/nginx-proxy:alpine-0.7.0
-      container_name: #{ops_container}
+      container_name: #{container_name}
       restart: always
       ports:
         - "80:80"
@@ -46,7 +45,20 @@ custom_commands do
   desc 'conf', 'list dynamic nginx config'
   def conf
     system <<~Desc
-      docker exec #{ops_container} cat /etc/nginx/conf.d/default.conf
+      docker exec #{container_name} cat /etc/nginx/conf.d/default.conf
+    Desc
+  end
+
+  desc 'test', 'test domains'
+  def test
+    cname = 'nginx-proxy-test'
+    system_run <<~Desc
+      #{dkrun_cmd} --name #{cname} -d \
+        -e VIRTUAL_HOST=#{domain_for(:whoami)} \
+        jwilder/whoami
+      sleep 3
+      curl http://#{domain_for(:whoami)}
+      docker rm -f #{cname}
     Desc
   end
 
@@ -54,7 +66,7 @@ custom_commands do
   def alog
     # access.log -> /dev/stdout
     system <<~Desc
-      docker exec #{ops_container} tail -f /var/log/nginx/access.log
+      docker exec #{container_name} tail -f /var/log/nginx/access.log
     Desc
   end
 end

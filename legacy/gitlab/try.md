@@ -14,7 +14,7 @@ Daily backups are created at GITLAB_BACKUP_TIME which defaults to 04:00 everyday
 
 ## 如何命令行创建gitlab项目及本地自动化
 
-http://gitlab.lh/help/api/README.md
+http://gitlab.localhost/help/api/README.md
 
 ## shell cli 使用
 

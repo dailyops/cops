@@ -16,7 +16,7 @@ task :main do
   #-e CONSUL_BIND_INTERFACE=eth0 
   system_run <<~Desc
     #{dkrun_cmd(named: true)} -d \
-      -e VIRTUAL_HOST=consul.lh \
+      -e VIRTUAL_HOST=#{domain_for(:consul)} \
       -e VIRTUAL_PORT=8500 \
       -p #{fetch(:web_port)}:8500 \
       -v #{script_path}/config:/consul/config \

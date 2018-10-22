@@ -404,6 +404,15 @@ module DockDSL
   def default_cmd
     fetch(:default_cmd)
   end
+
+  ## top proxy domain part
+  def proxy_domain
+    ENV['LOCAL_DKLET_DOMAIN'] || 'lh'
+  end
+
+  def domain_for(*doms)
+    doms.map{|d| "#{d}.#{proxy_domain}" }.join(',')
+  end
 end
 
 class DockletCLI < Thor
@@ -686,6 +695,7 @@ class DockletCLI < Thor
         network: netname,
         voluemes_root: volumes_root,
         app_volumes: app_volumes,
+        domain: domain,
         dsl_methods: dsl_methods,
         registry: registry
       }

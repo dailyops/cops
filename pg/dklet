@@ -29,7 +29,8 @@ end
 
 task :main do
   system <<~Desc
-    #{dkrun_cmd(named: true)} -d --restart always -p #{host_port}:5432 \
+    #{dkrun_cmd(named: true)} -d #{'--restart always' if env == 'prod'} \
+      -p #{host_port}:5432 \
       -e POSTGRES_PASSWORD=#{fetch(:initpassword)} \
       -v "#{script_path}/conf/postgresql.conf":/etc/postgresql/postgresql.conf \
       -v "#{app_volumes}":/var/lib/postgresql/data \

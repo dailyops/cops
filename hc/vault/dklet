@@ -22,7 +22,7 @@ task :main do
       --cap-add=IPC_LOCK \
       -p #{fetch(:host_port)}:8200 \
       -e VAULT_ADDR='http://0.0.0.0:8200' \
-      -e VIRTUAL_HOST=vault.lh \
+      -e VIRTUAL_HOST=#{domain_for(:vault)} \
       -e VIRTUAL_PORT=8200 \
       -v #{script_path}/config.hcl:/vault/config/config.hcl \
       -v #{app_volumes}:/vault/file \
@@ -109,7 +109,7 @@ custom_commands do
   def hclient
     system_run <<~Desc
       export VAULT_ADDR=#{host_uri}
-      vault login #{get_root_token}
+      vault login #{root_token}
       vault kv get secret/try
     Desc
   end
@@ -128,7 +128,7 @@ custom_commands do
       JSON.parse File.read(keysfile)
     end
     
-    def get_root_token
+    def root_token
       conf_hash['root_token']
     end
   end

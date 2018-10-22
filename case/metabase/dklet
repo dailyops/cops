@@ -6,6 +6,8 @@ add_note <<~Note
   https://www.metabase.com/docs/latest/operations-guide/running-metabase-on-docker.html
   problems
   https://www.metabase.com/docs/latest/troubleshooting-guide/running.html
+  Note with pg: 
+  ensure the db has created at first
 Note
 
 register_net
@@ -17,14 +19,13 @@ write_dockerfile <<~Desc
   LABEL <%=image_labels%>
 Desc
 
-# Note: should ensure the db has created
 task :main do
   system_run <<~Desc
     #{dkrun_cmd(named: true)} -d --restart=always \
       -p #{fetch(:host_port)}:3000 \
       -e MB_DB_CONNECTION_URI=postgres://postgres:password@prod_pg_default:5432/metabase \
       -e "JAVA_TIMEZONE=Asia/Shanghai" \
-      -e VIRTUAL_HOST=metabase.lh,bi.lh \
+      -e VIRTUAL_HOST=#{domain_for(:metabase, :bi)} \
       #{docker_image}
   Desc
 end
@@ -33,7 +34,7 @@ custom_commands do
   desc 'open', ''
   option :local, type: :boolean, default: true
   def open
-    host = 'bi.lh'
+    host = domain_for(:bi)
     host = "#{::Util.host_ip}:#{fetch(:host_port)}" unless options[:local]
     if options[:dry]
       puts "http://#{host}" 
@@ -79,5 +80,4 @@ services:
   -e "MB_DB_PASS=password" \
   -e "MB_DB_HOST=prod_pg_default" \
   -e "JAVA_TIMEZONE=Asia/Shanghai" \
-  -e VIRTUAL_HOST=metabase.lh,bi.lh \
   #{docker_image}

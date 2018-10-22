@@ -14,7 +14,7 @@ task :main do
   system_run <<~Desc
     #{dkrun_cmd(named: true)} -d \
       -p 3000 \
-      -e VIRTUAL_HOST=bi.h2.lh \
+      -e VIRTUAL_HOST=#{domain} \
       -e "JAVA_TIMEZONE=Asia/Shanghai" \
       -e MB_DB_FILE=/metabase-data/metabase.db \
       -v #{app_volumes}:/metabase-data \
@@ -26,7 +26,13 @@ custom_commands do
   desc 'open', ''
   def open
     system_run <<~Desc
-      open http://bi.h2.lh
+      open http://#{domain}
     Desc
+  end
+
+  no_commands do
+    def domain
+      domain_for('bi.h2')
+    end 
   end
 end
