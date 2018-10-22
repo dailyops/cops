@@ -33,57 +33,9 @@ task :main do
 end
 
 custom_commands do
-  ##################################################
-  #               AUTH METHODS
-  desc 'auths', 'list auth methods'
-  def auths
-    container_run <<~Desc
-      vault login #{fetch(:root_token)}
-      vault auth list
-    Desc
-  end
-
-  # https://www.vaultproject.io/docs/auth/github.html
-  # most useful for humans: operators or developers using Vault directly via the CLI.
-  # friendly to operators and machines
-  desc 'enable_github', ''
-  def enable_github(user = 'cao7113', org = 'dailyops')
-    gtoken = github_test_token
-    container_run <<~Desc
-      vault login #{fetch(:root_token)}
-      # enable it
-      vault auth enable github
-      # configure with which org?
-      vault write auth/github/config organization=#{org}
-      # map users/teams to vault core policies
-      #vault write auth/github/map/teams/dev value=github-dev-policy
-      #todo keys share in teams
-      
-      # create mappings for a specific user
-      vault write auth/github/map/users/#{user} value=github-test-policy
-      #GitHub user called #{user} will be assigned the policy + team policies.
-    Desc
-  end
-
-  desc 'login_github', ''
-  def login_github
-    # * using a GitHub personal access token
-    # * any valid GitHub access token with the read:org scope can be used for authentication
-    # * If such a token is stolen from a third party service, and the attacker is able to make network calls to Vault, they will be able to log in as the user that generated the access token. When using this method it is a good idea to ensure that access to Vault is restricted at a network level rather than public. 
-    gtoken = github_test_token
-    container_run <<~Desc
-      # will prompt by default if blank
-      vault login -method=github token="#{gtoken}"
-    Desc
-    #curl \
-      #--request POST \
-      #--data '{"token": "MY_TOKEN"}' \
-      #http://127.0.0.1:8200/v1/auth/github/login
-  end
- 
   # https://www.vaultproject.io/docs/auth/userpass.html
-  desc 'enable_userpass', ''
-  def enable__userpass
+  desc 'userpass_config', ''
+  def userpass_config
     container_run <<~Desc
       vault login #{fetch(:root_token)}
       vault auth enable userpass
@@ -94,8 +46,8 @@ custom_commands do
     Desc
   end
 
-  desc 'login_userpass', '' 
-  def login_userpass
+  desc 'userpass_login', '' 
+  def userpass_login
     container_run <<~Desc
       vault login --method=userpass \
         username=testuser password=test123 
@@ -177,7 +129,7 @@ custom_commands do
   desc 'token_get', 'get token info'
   def token_get
     container_run <<~Desc
-      # get current authenticated token info 
+      # get current authenticated token info, authenticated status 
       vault token lookup
       #vault token lookup -accessor b7xxxxx
       #vault token lookup b74cd5xxxx
@@ -230,10 +182,6 @@ custom_commands do
     
     def root_token
       fetch(:root_token)
-    end
-
-    def github_test_token
-      ENV['GITHUB_VAULT_TOKEN']
     end
   end
 end
