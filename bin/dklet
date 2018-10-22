@@ -30,6 +30,11 @@ custom_commands do
     puts "dklet ready to fly with you!"
   end
 
+  desc 'host_domain', ''
+  def host_domain
+    puts host_domain_in_container
+  end
+
   desc '', ''
   def clear
     system <<~Desc

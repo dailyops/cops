@@ -397,14 +397,6 @@ module DockDSL
     volumes_root.join(release_path_name)
   end
 
-  def register_default_cmd str
-    register :default_cmd, str
-  end
-
-  def default_cmd
-    fetch(:default_cmd)
-  end
-
   ## top proxy domain part
   def proxy_domain
     ENV['LOCAL_DKLET_DOMAIN'] || 'lh'
@@ -412,6 +404,11 @@ module DockDSL
 
   def domain_for(*doms)
     doms.map{|d| "#{d}.#{proxy_domain}" }.join(',')
+  end
+
+  # ref dklet/mac/
+  def host_domain_in_container
+    ENV['HOST_DOMAIN_IN_CONTAINER'] || 'host.dokcer.internal'
   end
 end
 
@@ -471,7 +468,7 @@ class DockletCLI < Thor
 
     abort "No container found!" unless cid
 
-    cmd = options[:cmd] || default_cmd || 'sh'
+    cmd = options[:cmd] || 'sh'
     puts "run : #{cmd}" unless options[:quiet]
 
     if cmd == 'sh' # simple case

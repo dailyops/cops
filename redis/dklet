@@ -11,7 +11,6 @@ Note
 
 register_net
 register :appname, 'redis'
-register_default_cmd "redis-cli -h #{container_name}"
 register_docker_image "redis:4.0-alpine"
 
 task :main do
@@ -30,6 +29,11 @@ custom_commands do
   def conf
     # https://redis.io/topics/config
     puts 'https://raw.githubusercontent.com/antirez/redis/4.0/redis.conf'
+  end
+
+  desc 'cli', ''
+  def cli
+    invoke :runsh, [], { cmd: "redis-cli -h #{container_name}" }
   end
 
   desc 'test', 'test redis-cli commands'

@@ -22,4 +22,3 @@ task :main do
     docker run --rm -it busybox:1.29 sh -l -c "wget -O- http://#{host_domain}:#{hport}; echo try anything in containers; sh"
   Desc
 end
-
