@@ -4,7 +4,7 @@
 
 * dk for docker wraper
 * kc for kubectl wrapper
-* dklet refer to dklet/
+* dklet refer to [dklet](https://github.com/dailyops/dklet)
 
 ## Quick start
 
@@ -13,7 +13,6 @@
 * try some examples
 
 ```
-rake dklet:hi    # a quick hi task
 dklet/try        # a dklet script
 case/pg/dklet    # try pg using dklet
 ``` 
