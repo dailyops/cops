@@ -4,7 +4,7 @@
 
 * dk for docker wraper
 * kc for kubectl wrapper
-* dklet refer to a practical DSL powered by ruby
+* dklet refer to dklet/
 
 ## Quick start
 

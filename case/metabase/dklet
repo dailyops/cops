@@ -35,7 +35,7 @@ custom_commands do
   option :local, type: :boolean, default: true
   def open
     host = domain_for(:bi)
-    host = "#{::Util.host_ip}:#{fetch(:host_port)}" unless options[:local]
+    host = "#{Dklet::Util.host_ip}:#{fetch(:host_port)}" unless options[:local]
     if options[:dry]
       puts "http://#{host}" 
       return

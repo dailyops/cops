@@ -1,7 +1,7 @@
 require 'tempfile'
 require 'socket'
 
-module Util
+module Dklet::Util
   module_function
 
   def tmpfile_for(str, prefix: 'kc-tmp')

@@ -40,7 +40,7 @@ custom_commands do
   def try
     cmds = []
     cmds << <<~Desc unless options[:query]
-      vault kv put secret/try name=geek-#{::Util.human_timestamp}
+      vault kv put secret/try name=geek-#{Dklet::Util.human_timestamp}
     Desc
     cmds << <<~Desc
       vault kv get secret/try
@@ -62,7 +62,7 @@ custom_commands do
     if keysfile.exist?
       if options[:force] || yes?("Already existed #{keysfile}, continue?")
         # avoid dangerous loss
-        backup = keysfile.to_s + "-bak-#{::Util.human_timestamp}"
+        backup = keysfile.to_s + "-bak-#{Dklet::Util.human_timestamp}"
         FileUtils.cp keysfile, backup
       else
         abort "#{keysfile} existed!"
