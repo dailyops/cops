@@ -8,7 +8,7 @@ register :web_port, 18500
 
 write_dockerfile <<~Desc
   FROM consul:1.3.0
-  LABEL <%%=image_labels%>
+  LABEL <%=image_labels%>
   RUN apk add bind-tools
 Desc
 

@@ -11,8 +11,8 @@ require_relative 'shared'
 
 write_dockerfile <<~Desc
   FROM vault:0.11.1
-  LABEL <%%=image_labels%>
-  RUN apk add curl
+  LABEL <%=image_labels%>
+  RUN apk add curl jq
 Desc
 
 task :main do

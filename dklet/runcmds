@@ -41,7 +41,7 @@ custom_commands do
 
   no_commands do
     def run_cmds_in(cid, cmds)
-      tfile = Dklet::Util.tmpfile_for cmds
+      tfile = tmpfile_for(cmds)
       dst_file = "/tmp/dklet-#{File.basename(tfile)}-#{rand(10000)}"
       system <<~Desc
         docker cp #{tfile} #{cid}:#{dst_file}

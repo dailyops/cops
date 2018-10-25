@@ -1,8 +1,8 @@
 desc 'batch test'
 task :test do
   system <<~Desc
-    try/try main
-    try/try clean
+    dklet/try main
+    dklet/try clean
     pg/dklet main
     pg/dklet clean
   Desc
