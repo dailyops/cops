@@ -6,6 +6,7 @@ add_note <<~Note
   https://www.metabase.com/docs/latest/operations-guide/running-metabase-on-docker.html
   problems
   https://www.metabase.com/docs/latest/troubleshooting-guide/running.html
+
   Note with pg: 
   ensure the db has created at first
 Note
@@ -37,7 +38,7 @@ custom_commands do
     host = domain_for(:bi)
     host = "#{Dklet::Util.host_ip}:#{fetch(:host_port)}" unless options[:local]
     if options[:dry]
-      puts "http://#{host}" 
+      puts "http://#{host}"
       return
     end
     system_run <<~Desc

@@ -50,7 +50,7 @@ end
 custom_commands do
   desc 'psql', 'start psql session'
   def psql
-    invoke :runsh, [], {cmd: "psql -U postgres"}
+    container_run 'psql'
   end
   map 'cli' => 'psql'
 

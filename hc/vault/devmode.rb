@@ -33,95 +33,15 @@ task :main do
 end
 
 custom_commands do
-  ###################################################
-  ##           guides
-  # https://learn.hashicorp.com/vault/secrets-management/sm-dynamic-secrets
-  desc 'dynamic', ''
-  def dynamic_config
-    pghost = 'dev_pg_default'
-
-    container_run <<~Desc
-      # login as root/admin personas
-      vault login #{root_token}
-      # step1: mount database secret engine at /database
-      # vault secrets disable database
-      vault secrets enable database &>/dev/null
-      # step2: config database
-      vault write database/config/postgresql \
-        plugin_name=postgresql-database-plugin \
-        allowed_roles=readonly \
-        connection_url=postgresql://{{username}}:{{password}}@#{pghost}:5432/postgres?sslmode=disable \
-        username=dbauser \
-        password=dbapassword
-    Desc
-
-    readonly_file = tmpfile_for <<~Desc
-      CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';
-      GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}"; 
-    Desc
-    system_run <<~Desc
-      docker cp #{readonly_file} #{container_name}:/tmp/readonly.sql 
-    Desc
-    
-    # step3: create a role
-    # A role is a logical name that maps to a policy used to generate credentials.
-    container_run <<~Desc
-      vault write database/roles/readonly \
-        db_name=postgresql creation_statements=@/tmp/readonly.sql \
-        default_ttl=1h max_ttl=24h
-    Desc
-
-    # step4 request cred
-    apps_policy = tmpfile_for <<~Desc
-      # Get credentials from the database secret engine
-      path "database/creds/readonly" {
-        capabilities = [ "read" ]
-      }
-    Desc
-    system_run <<~Desc
-      docker cp #{apps_policy} #{container_name}:/tmp/apps-policy.hcl
-    Desc
-    container_run <<~Desc
-      vault policy write apps /tmp/apps-policy.hcl
-    Desc
+  desc '', ''
+  def token
   end
 
-  desc '', 'verify on pg host'
-  def dynamic_check
-    pghost = 'dev_pg_default'
-    # generate new cred
-    container_run <<~Desc
-      # todo require root?
-      vault login #{root_token}
-      token=$(vault token create -policy="apps" -field=token)
-      echo ==use apps token $token
-      # login as apps personas
-      vault login $token
-      vault read database/creds/readonly -format=json | tee /tmp/a-readonly.json
-    Desc
-    json = `docker exec #{container_name} cat /tmp/a-readonly.json`
-    require 'json'
-    hash = JSON.parse(json)
-    puts hash if options[:debug]
-    dauth = hash['data'] || {}
-    container_run <<~Desc, cid: pghost
-      echo pg users:
-      psql -c '\\du'
-      psql -c '\\l' postgres://#{dauth['username']}:#{dauth['password']}@#{pghost}/postgres
-    Desc
-    container_run <<~Desc
-      vault token lookup
-      vault login #{root_token}
-      vault lease renew #{hash['lease_id']}
-      vault token lookup
-      vault lease revoke #{hash['lease_id']}
-      #vault lease revoke -prefix #{File.dirname(hash['lease_id'])}
-    Desc
-    container_run <<~Desc, cid: pghost
-      psql -c '\\du'
-    Desc
+  # todo
+  desc '', ''
+  def auditlog
   end
- 
+
   # https://www.vaultproject.io/docs/auth/userpass.html
   desc 'userpass_config', ''
   def userpass_config
