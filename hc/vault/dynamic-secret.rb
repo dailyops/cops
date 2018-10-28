@@ -8,6 +8,8 @@ add_note <<~Note
 Note
 
 task :main do
+  invoke :pg_add_root
+
   # config vault server
   run_on :vault, <<~Desc
     vault login #{root_token}
@@ -47,6 +49,7 @@ end
 
 custom_commands do
   desc '', 'verify on pg host'
+  option :psql, type: :boolean, banner: 'stop on psql session with the new user'
   def verify
     run_on :vault, <<~Desc
       vault login #{root_token}
@@ -65,8 +68,18 @@ custom_commands do
 
     run_on :pg, <<~Desc
       psql -c '\\du'
-      psql -c '\\l' postgres://#{dauth['username']}:#{dauth['password']}@#{pg_container}/postgres
+      psql -c '\\conninfo' postgres://#{dauth['username']}:#{dauth['password']}@#{pg_container}/postgres
     Desc
+
+    if options[:psql]
+      puts <<~Desc
+        try some ideas:
+        * suddently revoke release: #{hash['lease_id']}
+      Desc
+      run_on :pg, <<~Desc
+        psql postgres://#{dauth['username']}:#{dauth['password']}@#{pg_container}/postgres
+      Desc
+    end
 
     run_on :vault, <<~Desc
       vault login #{root_token}
@@ -101,6 +114,7 @@ custom_commands do
     Desc
   end
 
+  # 周期性rotate
   desc '', ''
   def pg_rotate_root
     puts "NOTE: after rotated, only vault know the password, so be careful by use a dedicade root user!!!"

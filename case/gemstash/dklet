@@ -26,7 +26,7 @@ task :main do
     #{dkrun_cmd} -d --name #{fetch(:service)} --restart always \
       -p #{fetch(:host_port)}:#{fetch(:service_port)} \
       -v #{app_volumes}:/root/.gemstash \
-      -e VIRTUAL_HOST=#{domain_for(:gemstash)} \
+      -e VIRTUAL_HOST=#{proxy_domains(:gemstash)} \
       #{docker_image}
   Desc
 end

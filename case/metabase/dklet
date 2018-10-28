@@ -4,16 +4,12 @@ add_note <<~Note
   https://hub.docker.com/r/metabase/metabase/
   https://github.com/metabase/metabase
   https://www.metabase.com/docs/latest/operations-guide/running-metabase-on-docker.html
-  problems
   https://www.metabase.com/docs/latest/troubleshooting-guide/running.html
-
-  Note with pg: 
-  ensure the db has created at first
 Note
 
 register_net
 register :appname, 'metabase'
-register :host_port, 23000
+register_domain :bi, :metabase
 
 write_dockerfile <<~Desc
   FROM metabase/metabase:v0.30.4
@@ -21,29 +17,28 @@ write_dockerfile <<~Desc
 Desc
 
 task :main do
+  # require db pre created!!!
+  dburl = "postgres://postgres:password@#{env}_pg_default:5432/metabase"
+  # test connect in the container???
   system_run <<~Desc
-    #{dkrun_cmd(named: true)} -d --restart=always \
-      -p #{fetch(:host_port)}:3000 \
-      -e MB_DB_CONNECTION_URI=postgres://postgres:password@prod_pg_default:5432/metabase \
+    #{dkrun_cmd(named: true)} -d #{'--restart=always' if env == 'prod'} \
+      -p :3000 \
       -e "JAVA_TIMEZONE=Asia/Shanghai" \
-      -e VIRTUAL_HOST=#{domain_for(:metabase, :bi)} \
+      -e MB_DB_CONNECTION_URI=#{dburl} \
+      -e VIRTUAL_HOST=#{proxy_domains} \
       #{docker_image}
   Desc
 end
 
 custom_commands do
-  desc 'open', ''
-  option :local, type: :boolean, default: true
+  desc 'open', 'open ui'
+  option :host, type: :boolean, banner: 'use host net ip', aliases: [:h]
   def open
-    host = domain_for(:bi)
-    host = "#{Dklet::Util.host_ip}:#{fetch(:host_port)}" unless options[:local]
-    if options[:dry]
-      puts "http://#{host}"
-      return
-    end
-    system_run <<~Desc
-      open http://#{host}
-    Desc
+    host = proxy_domains(:bi)
+    host = "#{host_with_port_for(3000)}" if options[:host]
+    url = "http://#{host}"
+    puts url
+    system "open #{url}" unless options[:dry]
   end
 end
 

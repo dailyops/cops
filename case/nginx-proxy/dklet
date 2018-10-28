@@ -54,10 +54,10 @@ custom_commands do
     cname = 'nginx-proxy-test'
     system_run <<~Desc
       #{dkrun_cmd} --name #{cname} -d \
-        -e VIRTUAL_HOST=#{domain_for(:whoami)} \
+        -e VIRTUAL_HOST=#{proxy_domains(:whoami)} \
         jwilder/whoami
       sleep 3
-      curl http://#{domain_for(:whoami)}
+      curl http://#{proxy_domains(:whoami)}
       docker rm -f #{cname}
     Desc
   end

@@ -10,7 +10,7 @@ register :host_port, 8834
 task :main, preclean: false do
   system_run <<~Desc
     #{dkrun_cmd(named: true)} -d -p #{fetch(:host_port)}:8834 \
-      -e VIRTUAL_HOST=#{domain_for(:nessus)} \
+      -e VIRTUAL_HOST=#{proxy_domains(:nessus)} \
       -v #{app_volumes}:/opt/nessus/etc/nessus/ \
       #{docker_image}
   Desc

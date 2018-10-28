@@ -35,6 +35,6 @@ task :main do
     ssh -p #{port} \
       -o PreferredAuthentications=password \
       -o StrictHostKeyChecking=no \
-      root@#{domain_for('ssh-server.docker')}
+      root@#{proxy_domains('ssh-server.docker')}
   Desc
 end

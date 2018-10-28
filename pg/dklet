@@ -38,7 +38,6 @@ task :main do
       # -c 'shared_buffers=256MB' -c 'max_connections=200'
   Desc
   
-  # TODO health check?
   t0 = Time.now
   until system("docker exec #{ops_container} pg_isready > /dev/null")
     puts "waiting for initdb..."
@@ -48,50 +47,40 @@ task :main do
 end
 
 custom_commands do
-  desc 'psql', 'start psql session'
-  def psql
-    container_run 'psql'
-  end
-  map 'cli' => 'psql'
-
   desc 'sampleconf', ''
   def sampleconf
     # debian /usr/share/postgresql/postgresql.conf.sample
     system <<~Desc
-      docker run -i --rm #{docker_image} cat /usr/local/share/postgresql/postgresql.conf.sample | tee #{script_path}/conf/postgresql.conf.sample
-      docker run -i --rm #{docker_image} cat /usr/local/share/postgresql/pg_hba.conf.sample | tee #{script_path}/conf/pg_hba.conf.sample
+      #{dktmprun} cat /usr/local/share/postgresql/postgresql.conf.sample | tee #{script_path}/conf/postgresql.conf.sample
+      #{dktmprun} cat /usr/local/share/postgresql/pg_hba.conf.sample | tee #{script_path}/conf/pg_hba.conf.sample
     Desc
   end
 
   desc 'entrypoint', 'show entrypoint'
   def entrypoint
-    invoke :runsh, [], {cmd: 'cat docker-entrypoint.sh'}
+    system <<~Desc
+      #{dktmprun} cat docker-entrypoint.sh
+    Desc
   end
  
   desc 'user', ''
   def users
-    # drop user "v-token-readonly-55wami8rM5M7vSewJuFC-1540458739";
     container_run <<~Desc
       psql -c '\\du'
     Desc
   end
 
-  desc 'dbuser USER PASSWORD', 'create a dbuser for app eg. rails'
-  def dbuser(user, passwd)
-    # TODO fix tmp file and run
-    tmpfile = volumes_root.join('tmp.sql')
-    tmpfile.write <<~Desc
-      CREATE USER #{user} with CREATEDB PASSWORD '#{passwd}';
+  desc 'create_user USER PASSWORD', 'create a dbuser for app eg. rails'
+  def create_user(user, passwd)
+    container_run <<~Desc
+      cat <<-SQL | psql
+        CREATE USER #{user} with CREATEDB PASSWORD '#{passwd}';
+      SQL
     Desc
-    system <<~Desc
-      #{dkrun_cmd} -i --rm -v #{tmpfile}:/tmpsqlfile #{docker_image} \
-        psql -f /tmpsqlfile postgres://postgres:#{fetch(:initpassword)}@#{container_name}/postgres
-    Desc
-    tmpfile.delete
   end
 
-  desc 'test', 'test pg server feature'
-  def test # if password changed
+  desc 'test', 'test if password changed after inited'
+  def test 
     cname = 'pgpswd1'
     pswd = fetch(:initpassword)
     pswd1 = "#{pswd}-changed"
@@ -111,9 +100,13 @@ custom_commands do
     puts "wait taken #{Time.now - t0} seconds"
 
     # use different password to startup, no effect 
-    invoke :runsh, [], {exec: false, cmd: "psql -c 'show work_mem' postgres://postgres:#{pswd1}@#{cname}/postgres"}
+    container_run <<~Desc, tmp: true
+      psql -c 'show work_mem' postgres://postgres:#{pswd1}@#{cname}/postgres
+    Desc
     ## ok, keep old init password 
-    #invoke :runsh, [], {exec: false, cmd: "psql -c 'show work_mem' postgres://postgres:#{pswd}@#{cname}/postgres"}
+    container_run <<~Desc, tmp: true
+      psql -c 'show work_mem' postgres://postgres:#{pswd}@#{cname}/postgres
+    Desc
   end
   
   no_commands do
@@ -133,3 +126,5 @@ __END__
 try master-slave cluster
 
 healthcheck https://github.com/docker-library/healthcheck/blob/master/postgres/docker-healthcheck
+
+drop user "v-token-readonly-55wami8rM5M7vSewJuFC-1540458739";

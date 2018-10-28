@@ -22,7 +22,7 @@ task :main do
       --cap-add=IPC_LOCK \
       -p #{fetch(:host_port)}:8200 \
       -e VAULT_ADDR='http://0.0.0.0:8200' \
-      -e VIRTUAL_HOST=#{domain_for(:vault)} \
+      -e VIRTUAL_HOST=#{proxy_domains(:vault)} \
       -e VIRTUAL_PORT=8200 \
       -v #{script_path}/config.hcl:/vault/config/config.hcl \
       -v #{app_volumes}:/vault/file \

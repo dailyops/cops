@@ -13,10 +13,11 @@ task :dailyops do
     case/nginx-proxy/dklet
     case/portainer/dklet
     case/gemstash/dklet
-    case/metabase/dklet
+
     pg/dklet -e prod
     redis/dklet -e prod
-    hc/vault/dklet
+    case/metabase/dklet -e prod
+    hc/vault/dklet -e prod
   Desc
   Rake::Task[:devdns].invoke
 end
