@@ -11,9 +11,9 @@ end
 task :dailyops do
   system <<~Desc
     case/nginx-proxy/dklet
-    case/portainer/dklet
     case/gemstash/dklet
 
+    case/portainer/dklet -e prod
     pg/dklet -e prod
     redis/dklet -e prod
     case/metabase/dklet -e prod

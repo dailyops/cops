@@ -1,8 +1,4 @@
 #!/usr/bin/env bash 
-[ -z $BOOTER_KC_RC ] || { echo Warning: has sourced $BOOTER_KC_RC!; return 1; } 
-BOOTER_KC_RC=$(evar=${BASH_SOURCE[0]} ruby -e "puts File.realpath(ENV['evar'])")
-BOOTER_KC_HOME=$(dirname $BOOTER_KC_RC)
-[ -d "$BOOTER_KC_HOME/bin" ] && PATH=$PATH:$BOOTER_KC_HOME/bin
 
 ## k8s utils powered by kubectl
 

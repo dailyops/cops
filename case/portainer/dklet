@@ -7,15 +7,12 @@ add_note <<~Note
   https://portainer.readthedocs.io/en/latest/deployment.html#secure-portainer-using-ssl
 Note
 
-# user/passwd: admin/portainer
 register_net
 register :appname, 'portainer'
 register_docker_image 'portainer/portainer'
 
 #https://portainer.readthedocs.io/en/stable/deployment.html#quick-start
 task :main do
-  invoke :netup, [], {}
-
   system <<~Desc
     #{dkrun_cmd(named: true)} -d --restart always \
       -p :9000 \
@@ -52,6 +49,3 @@ portainer:
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     - ~/upnetdata/portainer:/data
-  #environment:
-    ## nginx vhost
-    #- VIRTUAL_HOST=p.cao9.me, portainer.cao9.me

@@ -47,6 +47,11 @@ task :main do
 end
 
 custom_commands do
+  desc 'psql', ''
+  def psql(*args)
+    container_run "psql -a #{args.join(' ')}"
+  end
+
   desc 'sampleconf', ''
   def sampleconf
     # debian /usr/share/postgresql/postgresql.conf.sample

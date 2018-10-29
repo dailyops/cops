@@ -1,0 +1,51 @@
+#!/usr/bin/env bash 
+if [ -z $BOOTER_KC_RC ];then
+  BOOTER_KC_RC=$( ruby -e "puts File.realpath('${BASH_SOURCE[0]}')")
+  BOOTER_KC_HOME=$(dirname $BOOTER_KC_RC)
+  [ -d "$BOOTER_KC_HOME/bin" ] && PATH=$PATH:$BOOTER_KC_HOME/bin
+else
+  if [ -z $FORCE_RC ]; then
+    echo Warning: has sourced $BOOTER_KC_RC!
+    return 1 
+  fi
+fi
+
+source $BOOTER_KC_HOME/docker.rc
+source $BOOTER_KC_HOME/k8s.rc
+
+## todo fix here
+#function kc(){
+#  tp=${1:-cd}
+#  case "$tp" in
+#    rc|file)
+#      echo "$BOOTER_KC_RC"
+#      ;;
+#    home|root)
+#      echo $BOOTER_KC_HOME
+#      ;;
+#    cd)
+#      cd "$BOOTER_KC_HOME"
+#      ;;
+#    edit|vi)
+#      vi "$BOOTER_KC_RC"
+#      $FUNCNAME reload
+#      ;;
+#    show)
+#      cat "$BOOTER_KC_RC"
+#      ;;
+#    reload|source)
+#      FORCE_RC=1 source "$BOOTER_KC_RC"
+#      echo ==has reloaded "$BOOTER_KC_RC"
+#      ;;
+#    help|h)
+#      echo rc file: "$BOOTER_KC_RC"
+#      type $FUNCNAME 
+#      ;;
+#    *)
+#      $FUNCNAME help
+#      ;;
+#  esac
+#}
+
+## aliases
+alias pg="$BOOTER_KC_HOME/pg/dklet"

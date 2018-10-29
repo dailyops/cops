@@ -4,7 +4,6 @@ add_note <<~Note
 Note
 
 register_net
-register :host_port, 18200
 register :root_token, 'root'
 require_relative 'shared'
 
@@ -22,10 +21,10 @@ task :main do
   system_run <<~Desc
     #{dkrun_cmd(named: true)} -d \
       --cap-add=IPC_LOCK \
-      -e VIRTUAL_HOST=#{proxy_domains('vault.dev')} \
+      -e VIRTUAL_HOST=#{proxy_domains(:vault)} \
       -e VAULT_ADDR='http://0.0.0.0:8200' \
       -e VAULT_DEV_LISTEN_TLS_DISABLE=1 \
-      -p #{fetch(:host_port)}:8200 \
+      -p :8200 \
       #{docker_image} server -dev \
         -dev-root-token-id=#{root_token}
   Desc
@@ -177,12 +176,13 @@ custom_commands do
         root_token: root_token
       }
     }
+    require 'json'
     puts h.to_json
   end
 
   no_commands do
     def host_uri
-      "http://localhost:#{fetch(:host_port)}"
+      "http://#{host_with_port_for(8200)}"
     end
     
     def root_token

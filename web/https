@@ -1,6 +1,7 @@
 #!/usr/bin/env rundklet
 add_note <<~Note
-  todo
+  https://tls.ulfheim.net/
+  https://www.websecurity.symantec.com/zh/cn/security-topics/what-is-ssl-tls-https
 Note
 
 # https://docs.docker.com/develop/develop-images/dockerfile_best-practices
@@ -12,7 +13,6 @@ Desc
 task :main do
   system_run <<~Desc
     #{dkrun_cmd(named: true)} -d #{docker_image}
-    # #{compose_cmd} up -d
   Desc
 end
 

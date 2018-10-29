@@ -6,7 +6,6 @@ Note
 
 require_relative 'shared'
 register :appname, 'gemstash'
-register :app_volumes, volumes_root.join('gemstash')
 
 # https://hub.docker.com/r/govuk/gemstash-alpine/~/dockerfile/
 write_dockerfile <<~Desc
@@ -21,12 +20,11 @@ write_dockerfile <<~Desc
 Desc
 
 task :main do
-  invoke :netup, [], {}
   system <<~Desc
     #{dkrun_cmd} -d --name #{fetch(:service)} --restart always \
       -p #{fetch(:host_port)}:#{fetch(:service_port)} \
       -v #{app_volumes}:/root/.gemstash \
-      -e VIRTUAL_HOST=#{proxy_domains(:gemstash)} \
+      -e VIRTUAL_HOST=#{proxy_domains(:gemstash)},gemstash.lh \
       #{docker_image}
   Desc
 end
