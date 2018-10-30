@@ -20,12 +20,6 @@ custom_commands do
       #vault token lookup b74cd5xxxx
     Desc
   end
-
-  no_commands do
-    def default_ops_container
-      vault_container
-    end
-  end
 end
 
 # Generated with dklet version: 0.1.6

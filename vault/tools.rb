@@ -14,7 +14,7 @@ custom_commands do
       echo '{"format": "base64"}' > payload.json
       curl --header "X-Vault-Token: #{root_token}" -X POST \
         --data @payload.json \
-        http://#{vault_container}:8200/v1/sys/tools/random/#{bs}
+        http://localhost:8200/v1/sys/tools/random/#{bs}
       rm payload.json
     Desc
   end
@@ -27,7 +27,7 @@ custom_commands do
         --header "X-Vault-Token: #{root_token}" \
         --request POST \
         --data @payload.json \
-        http://#{vault_container}:8200/v1/sys/tools/hash/sha2-512
+        http://localhost:8200/v1/sys/tools/hash/sha2-512
       rm payload.json
     Desc
   end

@@ -12,7 +12,7 @@ task :main do
   invoke :pg_add_root
 
   # config vault server with pg dynamic secrets engine
-  container_run_on :vault, <<~Desc
+  container_run <<~Desc
     vault login #{root_token}
 
     # step1: mount at /database
@@ -24,7 +24,7 @@ task :main do
     vault write database/config/postgresql \
       plugin_name=postgresql-database-plugin \
       allowed_roles="*" \
-      connection_url=postgresql://{{username}}:{{password}}@#{pg_container}:5432/postgres?sslmode=disable \
+      connection_url=postgresql://{{username}}:{{password}}@#{pghost}:5432/postgres?sslmode=disable \
       username=#{pg_root_user} \
       password=#{pg_root_init_password}
 
@@ -51,7 +51,7 @@ end
 custom_commands do
   desc '', 'verify on pg host'
   def check
-    container_run_on :vault, <<~Desc
+    container_run <<~Desc
       vault login #{root_token}
       token=$(vault token create -policy="pgreadonly" -field=token)
       echo ==use token $token
@@ -60,14 +60,14 @@ custom_commands do
       vault read database/creds/readonly -format=json | tee /tmp/a-readonly.json
     Desc
 
-    json = `docker exec #{vault_container} cat /tmp/a-readonly.json`
+    json = `docker exec #{ops_container} cat /tmp/a-readonly.json`
     require 'json'
     hash = JSON.parse(json)
     puts hash if options[:debug]
     dauth = hash['data'] || {}
 
-    dburl = "postgres://#{dauth['username']}:#{dauth['password']}@#{pg_container}/postgres"
-    container_run_on :pg, <<~Desc
+    dburl = "postgres://#{dauth['username']}:#{dauth['password']}@#{pghost}/postgres"
+    container_run <<~Desc, cid: pghost
       psql -c '\\du'
       psql -c '\\conninfo' #{dburl}
     Desc
@@ -77,19 +77,19 @@ custom_commands do
         try some ideas:
         * suddently revoke lease: #{hash['lease_id']}
       Desc
-      container_run_on :pg, <<~Desc
+      container_run <<~Desc, cid: pghost
         psql #{dburl}
       Desc
     end
 
-    container_run_on :vault, <<~Desc
+    container_run <<~Desc
       vault login #{root_token}
       vault lease renew #{hash['lease_id']}
       vault lease revoke #{hash['lease_id']}
       #vault lease revoke -prefix #{File.dirname(hash['lease_id'])}
     Desc
 
-    container_run_on :pg, <<~Desc
+    container_run <<~Desc, cid: pghost
       psql -c '\\du'
     Desc
   end
@@ -98,7 +98,7 @@ custom_commands do
   desc '', ''
   def app_config
     ## create appadmin role and policy
-    container_run_on :vault, <<~Desc
+    container_run <<~Desc
       vault login #{root_token}
 
       # todo a good way to manage db structure by a migrator with dynamic password
@@ -127,17 +127,17 @@ custom_commands do
     Desc
 
     ## parse the appadmin db user for the db app
-    json = `docker exec #{vault_container} cat /tmp/appadmin.json`
+    json = `docker exec #{ops_container} cat /tmp/appadmin.json`
     require 'json'
     # todo save this to revoke
     hash = JSON.parse(json)
     puts hash if options[:debug]
     dauth = hash['data'] || {}
-    dburl = "postgres://#{dauth['username']}:#{dauth['password']}@#{pg_container}/postgres"
+    dburl = "postgres://#{dauth['username']}:#{dauth['password']}@#{pghost}/postgres"
 
     # create the db app with a normal db user role
     approle = 'userrole4testdb4vault'
-    container_run_on :pg, <<~Desc
+    container_run <<~Desc, cid: pghost
       # clean to get a new app db, do by db root user
       cat <<-SQL | psql
         -- ERROR:  database "testdb4vault" is being accessed by other users
@@ -166,7 +166,7 @@ custom_commands do
     Desc
 
     # create normal vaulte user role
-    container_run_on :vault, <<~Desc
+    container_run <<~Desc
       vault login #{root_token}
 
       cat <<-SQL >/tmp/appuser.sql
@@ -199,7 +199,7 @@ custom_commands do
 
   desc '', ''
   def app_check
-    container_run_on :vault, <<~Desc
+    container_run <<~Desc
       vault login #{root_token}
       token=$(vault token create -policy="app" -field=token)
       echo ==use token $token
@@ -208,14 +208,14 @@ custom_commands do
       vault read database/creds/appuser -format=json | tee /tmp/app.json
     Desc
 
-    json = `docker exec #{vault_container} cat /tmp/app.json`
+    json = `docker exec #{ops_container} cat /tmp/app.json`
     require 'json'
     hash = JSON.parse(json)
     puts hash if options[:debug]
     dauth = hash['data'] || {}
 
-    dburl = "postgres://#{dauth['username']}:#{dauth['password']}@#{pg_container}/#{app_testdb}"
-    container_run_on :pg, <<~Desc
+    dburl = "postgres://#{dauth['username']}:#{dauth['password']}@#{pghost}/#{app_testdb}"
+    container_run <<~Desc, cid: pghost
       # only superuser or owner can drop table?
       cat <<-SQL | psql -a #{dburl}
         delete from users where name = 'vault';
@@ -229,30 +229,30 @@ custom_commands do
         try some ideas:
         * suddently revoke lease: #{hash['lease_id']}
       Desc
-      container_run_on :pg, <<~Desc
+      container_run <<~Desc, cid: pghost
         psql #{dburl}
       Desc
     end
 
     lease_id = hash['lease_id']
-    container_run_on :pg, <<~Desc
+    container_run <<~Desc, cid: pghost
       ps aux | grep appuser
     Desc
-    container_run_on :pg, <<~Desc
+    container_run <<~Desc, cid: pghost
       psql -c "\\du"
     Desc
 
     #require 'byebug'
     #byebug
-    container_run_on :vault, <<~Desc
+    container_run <<~Desc
       vault login #{root_token}
       vault lease revoke #{lease_id} 
     Desc
 
-    container_run_on :pg, <<~Desc
+    container_run <<~Desc, cid: pghost
       ps aux | grep appuser
     Desc
-    container_run_on :pg, <<~Desc
+    container_run <<~Desc, cid: pghost
       psql -c "\\du"
     Desc
   end
@@ -260,7 +260,7 @@ custom_commands do
   desc '', ''
   def grant_test
     dbuser = 'testuser1'
-    container_run_on :pg, <<~Desc
+    container_run <<~Desc, cid: pghost
       cat <<-SQL | psql 
         -- NOTE: depend on current db for some revoke and grant!!!
         \\c #{app_testdb}
@@ -290,11 +290,11 @@ custom_commands do
 
   desc '', ''
   def pg_add_root(root = pg_root_user)
-    container_run_on :pg, <<~Desc
+    container_run <<~Desc, cid: pghost
       cat <<-SQL | psql -a
         drop user if exists "#{root}";
         create user "#{root}" with superuser password '#{pg_root_init_password}';
-        COMMENT ON ROLE "#{root}" IS 'only vault used #{Dklet::Util.human_timestamp}';
+        COMMENT ON ROLE "#{root}" IS 'vault only #{Dklet::Util.human_timestamp}';
         \\du+
       SQL
     Desc
@@ -304,7 +304,7 @@ custom_commands do
   # be CAREFUL to use a special root user!
   desc '', ''
   def pg_rotate_root
-    container_run_on :vault, <<~Desc
+    container_run <<~Desc
       vault login #{root_token}
       vault write -force database/rotate-root/postgresql
     Desc
@@ -312,14 +312,14 @@ custom_commands do
 
   desc '', ''
   def pg_check_root
-    container_run_on :pg, <<~Desc
+    container_run <<~Desc, cid: pghost
       psql -a -c '\\conninfo' \
-        postgres://#{pg_root_user}:#{pg_root_init_password}@#{pg_container}/postgres
+        postgres://#{pg_root_user}:#{pg_root_init_password}@#{pghost}/postgres
     Desc
   end
 
   no_commands do
-    def pg_container
+    def pghost
       'dev_pg_default'
     end
 
@@ -333,11 +333,6 @@ custom_commands do
 
     def app_testdb
       "testdb4vault"
-    end
-
-    def container_run_on(host, cmds, opts = {})
-      cid = send("#{host}_container")
-      container_run(cmds, {cid: cid}.merge(opts))
     end
   end
 end
