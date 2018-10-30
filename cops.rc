@@ -1,0 +1,47 @@
+#!/usr/bin/env bash 
+if [ -z $BOOTER_COPS_RC ];then
+  BOOTER_COPS_RC=$( ruby -e "puts File.realpath('${BASH_SOURCE[0]}')")
+  BOOTER_COPS_HOME=$(dirname $BOOTER_COPS_RC)
+  [ -d "$BOOTER_COPS_HOME/bin" ] && PATH=$PATH:$BOOTER_COPS_HOME/bin
+else
+  if [ -z $FORCE_RC ]; then
+    echo Warning: has sourced $BOOTER_COPS_RC!
+    return 1 
+  fi
+fi
+
+function cops(){
+  tp=${1:-cd}
+  case "$tp" in
+    rc|file)
+      echo "$BOOTER_COPS_RC"
+      ;;
+    home|root)
+      echo $BOOTER_COPS_HOME
+      ;;
+    cd)
+      cd "$BOOTER_COPS_HOME"
+      ;;
+    edit|vi)
+      vi "$BOOTER_COPS_RC"
+      $FUNCNAME reload
+      ;;
+    show)
+      cat "$BOOTER_COPS_RC"
+      ;;
+    reload|source)
+      FORCE_RC=1 source "$BOOTER_COPS_RC"
+      echo ==has reloaded "$BOOTER_COPS_RC"
+      ;;
+    help|h)
+      echo rc file: "$BOOTER_COPS_RC"
+      type $FUNCNAME 
+      ;;
+    *)
+      $FUNCNAME help
+      ;;
+  esac
+}
+
+source $BOOTER_KC_HOME/docker.rc
+source $BOOTER_KC_HOME/k8s.rc

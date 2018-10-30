@@ -19,18 +19,6 @@ kc_set_config
 kc(){
   tp=${1}
   case "$tp" in
-  home|root)
-    echo $BOOTER_KC_HOME
-    ;;
-  cd)
-    cd "$BOOTER_KC_HOME"
-    ;;
-  rc|vi)
-    vi "$BOOTER_KC_RC"
-    ;;
-  show)
-    cat "$BOOTER_KC_RC"
-    ;;
   help|h)
     type $FUNCNAME 
     ;;

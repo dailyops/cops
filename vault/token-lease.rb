@@ -11,8 +11,8 @@ task :main do
 end
 
 custom_commands do
-  desc 'token_get', 'get token info'
-  def token_get
+  desc '', 'get token info'
+  def mytoken
     container_run <<~Desc
       # get current authenticated token info, authenticated status 
       vault token lookup
@@ -20,8 +20,11 @@ custom_commands do
       #vault token lookup b74cd5xxxx
     Desc
   end
-  desc 'try', 'try'
-  def try
+
+  no_commands do
+    def default_ops_container
+      vault_container
+    end
   end
 end
 
