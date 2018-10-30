@@ -19,7 +19,16 @@ custom_commands do
       sh
     Desc
   end
-  # how to logout?? revoke the token???
+  # how to logout?? 
+  
+  # id like database/creds/appuser/a5dfb8a5-a5ca-b1c9-74e0-d1b65678b48d
+  desc 'revoke_lease ID', ''
+  def revoke_lease(id)
+    container_run <<~Desc
+      vault login #{root_token}
+      vault lease revoke #{id}
+    Desc
+  end 
   
   ##################################################
   #               AUTH METHODS

@@ -1,46 +1,8 @@
 #!/usr/bin/env rundklet
-add_note <<~Note
-  try vault server in dev mode
-Note
 
-register_net
-register :root_token, 'root'
-require_relative 'shared'
-
-write_dockerfile <<~Desc
-  FROM vault:0.11.1
-  LABEL <%=image_labels%>
-  RUN apk add curl jq
-Desc
-
-task :main do
-  # SKIP_SETCAP to skip setcap Memory Locking
-  #-e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:1234'
-  #-e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' 
-  #-e VIRTUAL_PORT=8200 
-  system_run <<~Desc
-    #{dkrun_cmd(named: true)} -d \
-      --cap-add=IPC_LOCK \
-      -e VIRTUAL_HOST=#{proxy_domains(:vault)} \
-      -e VAULT_ADDR='http://0.0.0.0:8200' \
-      -e VAULT_DEV_LISTEN_TLS_DISABLE=1 \
-      -p :8200 \
-      #{docker_image} server -dev \
-        -dev-root-token-id=#{root_token}
-  Desc
-  # disable_mlock: true
-end
+require_relative 'devshared'
 
 custom_commands do
-  desc '', ''
-  def token
-  end
-
-  # todo
-  desc '', ''
-  def auditlog
-  end
-
   # https://www.vaultproject.io/docs/auth/userpass.html
   desc 'userpass_config', ''
   def userpass_config
@@ -126,67 +88,5 @@ custom_commands do
       # do not have access to sys according to the policy
       vault policy list # or vault secrets list
     Desc
-  end
-
-  ## tokens management
-  # * token is the only vault identification mechanism about vault users
-  desc 'token_get', 'get token info'
-  def token_get
-    container_run <<~Desc
-      # get current authenticated token info, authenticated status 
-      vault token lookup
-      #vault token lookup -accessor b7xxxxx
-      #vault token lookup b74cd5xxxx
-    Desc
-  end
-
-  ##################################################
-  #               TOOLS
-  # https://www.vaultproject.io/api/system/tools.html
-  desc 'random', ''
-  def random(bs = 3)
-    container_run <<~Desc
-      #echo '{"format": "hex"}' > payload.json
-      echo '{"format": "base64"}' > payload.json
-      curl --header "X-Vault-Token: #{root_token}" -X POST \
-        --data @payload.json \
-        http://#{container_name}:8200/v1/sys/tools/random/#{bs}
-      rm payload.json
-    Desc
-  end
-
-  desc 'hash', ''
-  def hash
-    container_run <<~Desc
-      echo '{"input": "Jfky"}' > payload.json
-      curl \
-        --header "X-Vault-Token: #{root_token}" \
-        --request POST \
-        --data @payload.json \
-        http://#{container_name}:8200/v1/sys/tools/hash/sha2-512
-      rm payload.json
-    Desc
-  end
-
-  desc 'server_info', 'show server config info'
-  def server_info
-    h = {
-      address: host_uri,
-      config: {
-        root_token: root_token
-      }
-    }
-    require 'json'
-    puts h.to_json
-  end
-
-  no_commands do
-    def host_uri
-      "http://#{host_with_port_for(8200)}"
-    end
-    
-    def root_token
-      fetch(:root_token)
-    end
   end
 end

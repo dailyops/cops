@@ -6,6 +6,8 @@ add_note <<~Note
   https://learn.hashicorp.com/vault/secrets-management/db-root-rotation
 Note
 
+require_relative 'devshared'
+
 task :main do
   invoke :pg_add_root
 
@@ -37,13 +39,12 @@ task :main do
       default_ttl=1h max_ttl=24h
 
     # step4: add a policy
-    cat <<-EOF >/tmp/pg-readonly-policy.hcl
+    vault policy write pgreadonly - <<-EOF
       # Get credentials from the database secret engine
       path "database/creds/readonly" {
         capabilities = [ "read" ]
       }
     EOF
-    vault policy write pgreadonly /tmp/pg-readonly-policy.hcl
   Desc
 end
 
@@ -74,7 +75,7 @@ custom_commands do
     if options[:debug]
       puts <<~Desc
         try some ideas:
-        * suddently revoke release: #{hash['lease_id']}
+        * suddently revoke lease: #{hash['lease_id']}
       Desc
       container_run_on :pg, <<~Desc
         psql #{dburl}
@@ -93,51 +94,58 @@ custom_commands do
     Desc
   end
 
+  ## todo split this standalone???
   desc '', ''
   def app_config
+    ## create appadmin role and policy
     container_run_on :vault, <<~Desc
       vault login #{root_token}
 
-      ## app db admin user
+      # todo a good way to manage db structure by a migrator with dynamic password
+      # https://stackoverflow.com/questions/50673003/how-to-setup-vault-and-postgres-in-google-cloud-to-have-the-correct-permissions
+      # problem: 如何多处并发使用?
       cat <<-SQL >/tmp/appadmin.sql
         CREATE ROLE "{{name}}" WITH CREATEDB CREATEROLE LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';
       SQL
       vault write database/roles/appadmin \
-        db_name=postgresql creation_statements=@/tmp/appadmin.sql \
+        db_name=postgresql \
+        creation_statements=@/tmp/appadmin.sql \
         default_ttl=1h max_ttl=24h
 
-      cat <<-EOF >/tmp/app-policy.hcl
+      vault policy write appadmin - <<-EOF
         # Get credentials from the database secret engine
         path "database/creds/appadmin" {
           capabilities = [ "read" ]
         }
       EOF
-      vault policy write appadmin /tmp/app-policy.hcl
 
+      ## create appadmin token user
       token=$(vault token create -policy="appadmin" -field=token)
       echo ==use token $token
       vault login $token
-      vault read database/creds/appadmin -format=json | tee /tmp/app.json
+      vault read database/creds/appadmin -format=json | tee /tmp/appadmin.json
     Desc
-    json = `docker exec #{vault_container} cat /tmp/app.json`
+
+    ## parse the appadmin db user for the db app
+    json = `docker exec #{vault_container} cat /tmp/appadmin.json`
     require 'json'
+    # todo save this to revoke
     hash = JSON.parse(json)
     puts hash if options[:debug]
     dauth = hash['data'] || {}
     dburl = "postgres://#{dauth['username']}:#{dauth['password']}@#{pg_container}/postgres"
 
-    # create db and app db role
-    hubrole = 'appuserrole'
+    # create the db app with a normal db user role
+    approle = 'userrole4testdb4vault'
     container_run_on :pg, <<~Desc
-      # do with superuser
-      cat <<-SQL | psql -a
+      # clean to get a new app db, do by db root user
+      cat <<-SQL | psql
         -- ERROR:  database "testdb4vault" is being accessed by other users
-        select pid, usename, application_name, client_addr, client_hostname, client_port, backend_start from pg_stat_activity where datname = '#{app_testdb}';
         SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '#{app_testdb}' AND pid <> pg_backend_pid();
         drop database if exists #{app_testdb};
       SQL
 
-      # on app db
+      # connet to create new db with appadmin user
       cat <<-SQL | psql -a #{dburl}
         create database #{app_testdb}; 
         REVOKE ALL ON DATABASE #{app_testdb} FROM PUBLIC;
@@ -146,35 +154,46 @@ custom_commands do
         \\d+
 
         --create a shared role
-        create role #{hubrole};
-        GRANT ALL on database #{app_testdb} to "#{hubrole}";
-        GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "#{hubrole}";
-        GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO "#{hubrole}";
+        create role #{approle};
+        GRANT ALL on database #{app_testdb} to "#{approle}";
+        GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "#{approle}";
+        GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO "#{approle}";
 
-        --for new created tables? todo
-        --ALTER DEFAULT PRIVILEGES FOR role #{hubrole} IN SCHEMA public GRANT all ON TABLES TO #{hubrole};
-        --ALTER DEFAULT PRIVILEGES FOR role #{hubrole} IN SCHEMA public GRANT all ON SEQUENCES TO #{hubrole};
+        --for new created tables? do not work, why
+        --ALTER DEFAULT PRIVILEGES FOR role #{approle} IN SCHEMA public GRANT all ON TABLES TO #{approle};
+        --ALTER DEFAULT PRIVILEGES FOR role #{approle} IN SCHEMA public GRANT all ON SEQUENCES TO #{approle};
       SQL
     Desc
 
+    # create normal vaulte user role
     container_run_on :vault, <<~Desc
       vault login #{root_token}
 
-      ## app normal user
       cat <<-SQL >/tmp/appuser.sql
-        CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' in role #{hubrole};
+        CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' in role #{approle};
       SQL
-      vault write database/roles/appuser \
-        db_name=postgresql creation_statements=@/tmp/appuser.sql \
-        default_ttl=1h max_ttl=24h
 
-      cat <<-EOF >/tmp/app-policy.hcl
+      # [ERROR] expiration: failed to revoke lease: lease_id=... error="failed to revoke entry: resp: (*logical.Response)(nil) err: pq: column "testdb4vault" does not exist"
+      #cat <<-SQL >/tmp/revoke-appuser.sql
+        #SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = "#{app_testdb}" and usename = "{{name}}" AND pid <> pg_backend_pid();
+        #DROP ROLE IF EXISTS "{{name}}";
+      #SQL
+      #  --REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {{name}};
+      #  --REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {{name}};
+      #  --REVOKE USAGE ON SCHEMA public FROM {{name}};
+      
+      vault write database/roles/appuser \
+        db_name=postgresql \
+        creation_statements=@/tmp/appuser.sql \
+        default_ttl=1h max_ttl=24h
+      # revocation_statements=@/tmp/revoke-appuser.sql 
+
+      vault policy write app - <<-EOF
         # Get credentials from the database secret engine
         path "database/creds/appuser" {
           capabilities = [ "read" ]
         }
       EOF
-      vault policy write app /tmp/app-policy.hcl
     Desc
   end
 
@@ -198,11 +217,7 @@ custom_commands do
     dburl = "postgres://#{dauth['username']}:#{dauth['password']}@#{pg_container}/#{app_testdb}"
     container_run_on :pg, <<~Desc
       # only superuser or owner can drop table?
-      cat <<-SQL | psql -a #{app_testdb}
-        drop table if exists blogs;
-      SQL
       cat <<-SQL | psql -a #{dburl}
-        --create table blogs (id serial, title varchar(100));
         delete from users where name = 'vault';
         insert into users (name) values('vault');
         select * from users limit 10;
@@ -212,21 +227,35 @@ custom_commands do
     if options[:debug]
       puts <<~Desc
         try some ideas:
-        * suddently revoke release: #{hash['lease_id']}
+        * suddently revoke lease: #{hash['lease_id']}
       Desc
       container_run_on :pg, <<~Desc
         psql #{dburl}
       Desc
     end
-  end
 
-  desc 'revoke_release ID', ''
-  def revoke_release(id)
+    lease_id = hash['lease_id']
+    container_run_on :pg, <<~Desc
+      ps aux | grep appuser
+    Desc
+    container_run_on :pg, <<~Desc
+      psql -c "\\du"
+    Desc
+
+    #require 'byebug'
+    #byebug
     container_run_on :vault, <<~Desc
       vault login #{root_token}
-      vault lease revoke #{id}
+      vault lease revoke #{lease_id} 
     Desc
-  end 
+
+    container_run_on :pg, <<~Desc
+      ps aux | grep appuser
+    Desc
+    container_run_on :pg, <<~Desc
+      psql -c "\\du"
+    Desc
+  end
 
   desc '', ''
   def grant_test
@@ -271,13 +300,6 @@ custom_commands do
     Desc
   end
 
-  desc '', ''
-  def pg_users
-    container_run_on :pg, <<~Desc
-      psql -c '\\du'
-    Desc
-  end
-
   #NOTE: only VAULT knows password after rotation!
   # be CAREFUL to use a special root user!
   desc '', ''
@@ -297,16 +319,6 @@ custom_commands do
   end
 
   no_commands do
-    # keep same with dev !!!
-    def vault_container
-      'dev_vault_devmode_default'
-    end
-
-    # todo use proper permission role
-    def root_token
-      'root'
-    end
-
     def pg_container
       'dev_pg_default'
     end

@@ -46,6 +46,3 @@ source $BOOTER_KC_HOME/k8s.rc
 #      ;;
 #  esac
 #}
-
-## aliases
-alias pg="$BOOTER_KC_HOME/pg/dklet"

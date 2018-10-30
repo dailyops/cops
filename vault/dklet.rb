@@ -1,12 +1,13 @@
 #!/usr/bin/env rundklet
 add_note <<~Note
-  vault in production ready use
+  try vault server
+
   https://www.katacoda.com/courses/docker-production/vault-secrets
   https://www.melvinvivas.com/secrets-management-using-docker-hashicorp-vault/
 Note
 
 register_net
-register :host_port, 28200
+register :appname, :vault
 require_relative 'shared'
 
 write_dockerfile <<~Desc
@@ -16,30 +17,48 @@ write_dockerfile <<~Desc
 Desc
 
 task :main do
-  #-e 'VAULT_LOCAL_CONFIG={"backend": {"file": {"path": "/vault/file"}}, ...}' 
-  system_run <<~Desc
-    #{dkrun_cmd(named: true)} -d --restart always \
-      --cap-add=IPC_LOCK \
-      -p #{fetch(:host_port)}:8200 \
-      -e VAULT_ADDR='http://0.0.0.0:8200' \
-      -e VIRTUAL_HOST=#{proxy_domains(:vault)} \
-      -e VIRTUAL_PORT=8200 \
-      -v #{script_path}/config.hcl:/vault/config/config.hcl \
-      -v #{app_volumes}:/vault/file \
-      #{docker_image} server
-  Desc
-  
-  # check init status??
-  sleep 1
-  invoke :unseal, [], {}
+  if devmode?
+    # SKIP_SETCAP to skip setcap Memory Locking
+    #-e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:1234'
+    #-e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' 
+    #-e VIRTUAL_PORT=8200 
+    system_run <<~Desc
+      #{dkrun_cmd(named: true)} -d \
+        --cap-add=IPC_LOCK \
+        -e VIRTUAL_HOST=#{proxy_domains(:vault)} \
+        -e VAULT_ADDR='http://0.0.0.0:8200' \
+        -e VAULT_DEV_LISTEN_TLS_DISABLE=1 \
+        -p :8200 \
+        #{docker_image} server -dev \
+          -dev-root-token-id=#{root_token}
+    Desc
+    # disable_mlock: true
+  else # in production
+    #-e 'VAULT_LOCAL_CONFIG={"backend": {"file": {"path": "/vault/file"}}, ...}' 
+    system_run <<~Desc
+      #{dkrun_cmd(named: true)} -d --restart always \
+        --cap-add=IPC_LOCK \
+        -p :8200 \
+        -e VAULT_ADDR='http://0.0.0.0:8200' \
+        -e VIRTUAL_HOST=#{proxy_domains(:vault)} \
+        -e VIRTUAL_PORT=8200 \
+        -v #{script_path}/config.hcl:/vault/config/config.hcl \
+        -v #{app_volumes}:/vault/file \
+        #{docker_image} server
+    Desc
+    
+    # check init status??
+    sleep 1
+    invoke :unseal, [], {}
+  end
 end
 
 custom_commands do
   desc 'try', 'try command after login'
-  option :query, type: :boolean, default: true, banner: 'just query'
+  option :put, type: :boolean, banner: 'first put info'
   def try
     cmds = []
-    cmds << <<~Desc unless options[:query]
+    cmds << <<~Desc if options[:put]
       vault kv put secret/try name=geek-#{Dklet::Util.human_timestamp}
     Desc
     cmds << <<~Desc
@@ -94,10 +113,10 @@ custom_commands do
   def server_info
     h = {
       address: host_uri,
-      config: conf_hash,
-      keysfile: keysfile
+      config: conf_hash
     }
     if options[:json]
+      require 'json'
       puts h.to_json
     else
       pp h
@@ -115,8 +134,16 @@ custom_commands do
   end
 
   no_commands do
+    def devmode?
+      env == 'dev'
+    end
+
     def host_uri
-      "http://localhost:#{fetch(:host_port)}"
+      "http://#{host_with_port_for(8200)}"
+    end
+    
+    def root_token
+      devmode? ? 'root' : conf_hash['root_token']
     end
 
     def keysfile
@@ -124,12 +151,14 @@ custom_commands do
     end
 
     def conf_hash
-      require 'json'
-      JSON.parse File.read(keysfile)
-    end
-    
-    def root_token
-      conf_hash['root_token']
+      if devmode?
+        {
+          root_token: root_token
+        }
+      else
+        require 'json'
+        JSON.parse File.read(keysfile)
+      end
     end
   end
 end
