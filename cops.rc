@@ -43,5 +43,5 @@ function cops(){
   esac
 }
 
-source $BOOTER_KC_HOME/docker.rc
-source $BOOTER_KC_HOME/k8s.rc
+source $BOOTER_COPS_HOME/docker.rc
+source $BOOTER_COPS_HOME/k8s.rc
