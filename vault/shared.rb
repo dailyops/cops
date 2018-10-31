@@ -4,18 +4,19 @@ add_note <<~Note
 Note
 
 custom_commands do
-  desc 'ui', 'open web'
-  def ui
+  desc '', 'open web'
+  def web
     # dev mode auto config
     system <<~Desc
       open "#{host_uri}/ui/"
     Desc
   end
+  map 'open' => :web
 
-  desc 'login_root', 'login as root'
-  def login_root
+  desc 'login', 'login as a token'
+  def login(token=root_token)
     container_run <<~Desc
-      vault login #{root_token}
+      vault login #{token}
       sh
     Desc
   end
@@ -30,16 +31,6 @@ custom_commands do
     Desc
   end 
   
-  ##################################################
-  #               AUTH METHODS
-  desc 'auths', 'list auth methods'
-  def auths
-    container_run <<~Desc
-      vault login #{fetch(:root_token)}
-      vault auth list
-    Desc
-  end
-
   # https://www.vaultproject.io/docs/auth/github.html
   # most useful for humans: operators or developers using Vault directly via the CLI.
   # friendly to operators and machines
@@ -47,7 +38,7 @@ custom_commands do
   def github_config(user = 'cao7113', org = 'dailyops')
     gtoken = github_access_token
     container_run <<~Desc
-      vault login #{fetch(:root_token)}
+      vault login #{root_token}
       # enable it
       vault auth enable github
       # configure with which org?
@@ -95,7 +86,7 @@ custom_commands do
       # Also reads from ENV["VAULT_ADDR"]
       Vault.address = host_uri
       # Also reads from ENV["VAULT_TOKEN"]
-      Vault.token   = get_root_token
+      Vault.token   = root_token
       @rclient_inited = true
     end
 

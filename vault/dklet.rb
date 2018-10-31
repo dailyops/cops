@@ -33,9 +33,9 @@ task :main do
           -dev-root-token-id=#{root_token}
     Desc
     # disable_mlock: true
-  else # in production
+  else # in production mode
     #-e 'VAULT_LOCAL_CONFIG={"backend": {"file": {"path": "/vault/file"}}, ...}' 
-    system_run <<~Desc
+    system <<~Desc
       #{dkrun_cmd(named: true)} -d --restart always \
         --cap-add=IPC_LOCK \
         -p :8200 \
@@ -46,10 +46,9 @@ task :main do
         -v #{app_volumes}:/vault/file \
         #{docker_image} server
     Desc
-    
-    # check init status??
-    sleep 1
-    invoke :unseal, [], {}
+
+    sleep 0.5
+    invoke :init
   end
 end
 
@@ -67,44 +66,51 @@ custom_commands do
     Desc
     container_run cmds
   end
-  
-  desc 'unseal', 'unseal after init'
-  def unseal
-    container_run <<~Desc
-      vault operator unseal #{conf_hash['keys'].first}
-      #vault status
-    Desc
-  end
-
-  desc 'init', 'init vault server'
-  def init
-    if keysfile.exist?
-      if options[:force] || yes?("Already existed #{keysfile}, continue?")
-        # avoid dangerous loss
-        backup = keysfile.to_s + "-bak-#{Dklet::Util.human_timestamp}"
-        FileUtils.cp keysfile, backup
-      else
-        abort "#{keysfile} existed!"
-      end
-    end
-    ## ways to init vault server
-    #// way1: cmd
-    #vault operator init -key-shares=1 -key-threshold=1
-    #// way2: api
-    #// way3: web, it will hint to init if not
-    #open http://localhost:8200/ui/
-    # avoid {"errors":["Vault is already initialized"]}???
-    system <<~Desc
-      curl --request POST \
-        --data '{"secret_shares": 1, "secret_threshold": 1}' \
-        #{host_uri}/v1/sys/init > #{keysfile}
-    Desc
-  end
 
   desc 'init_stats', 'query init status'
   def init_status
+    #-status
+    #Print the current initialization status. An exit code of 0 means the
+    #Vault is already initialized. An exit code of 1 means an error occurred.
+    #An exit code of 2 means the mean is not initialized. The default is
+    #false.
+    container_run <<~Desc
+      vault operator init -status >/dev/null
+      case $? in
+        0)
+          echo initialized
+          ;;
+        1)
+          echo errored
+          ;;
+        2)
+          echo not initialized
+          ;;
+      esac
+    Desc
+  end
+  
+  desc '', 'init'
+  def init
     system <<~Desc
-      curl #{host_uri}/v1/sys/init
+      docker exec -t #{container_name} vault operator init -status
+      if [ $? = 2 ]; then
+        if [ -f #{keysfile} ]; then
+          # avoid dangerous loss
+          bakfile=#{keysfile}-bak-#{Dklet::Util.human_timestamp}
+          cp #{keysfile} $bakfile
+        fi 
+        docker exec -t #{container_name} vault operator init -key-shares=1 -key-threshold=1 -format=json > #{keysfile}
+        echo ==keys file into #{keysfile}
+        cat #{keysfile}
+      fi
+    Desc
+  end
+
+  desc 'unseal', 'unseal after init'
+  def unseal
+    container_run <<~Desc
+      vault operator unseal #{conf_hash['unseal_keys_hex'].first}
     Desc
   end
 
@@ -124,8 +130,8 @@ custom_commands do
   end
   map 'keys' => 'server_info'
 
-  desc 'hclient', 'connet with host client'
-  def hclient
+  desc '', 'connet with host client'
+  def hostclient
     system_run <<~Desc
       export VAULT_ADDR=#{host_uri}
       vault login #{root_token}
@@ -147,14 +153,12 @@ custom_commands do
     end
 
     def keysfile
-      dklet_config_for("init-keys.json") 
+      dklet_config_for("init-keys.json")
     end
 
     def conf_hash
       if devmode?
-        {
-          root_token: root_token
-        }
+        { root_token: root_token }
       else
         require 'json'
         JSON.parse File.read(keysfile)

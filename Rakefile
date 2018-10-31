@@ -17,7 +17,7 @@ task :dailyops do
     pg/dklet -e prod
     redis/dklet -e prod
     case/metabase/dklet -e prod
-    hc/vault/dklet -e prod
+    vault/dklet -e prod
   Desc
   Rake::Task[:devdns].invoke
 end

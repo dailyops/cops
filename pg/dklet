@@ -52,17 +52,6 @@ custom_commands do
     container_run "psql -a #{args.join(' ')}"
   end
 
-  desc '', 'reset if need'
-  def reset
-    # be careful
-    abort "Not support reset for #{env}" if env != 'dev'
-    system <<~Desc
-      #{dklet_script} clean
-      #{dklet_script} clear_app_volumes
-      #{dklet_script}
-    Desc
-  end
-
   desc 'sampleconf', ''
   def sampleconf
     # debian /usr/share/postgresql/postgresql.conf.sample
