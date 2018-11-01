@@ -88,6 +88,7 @@ custom_commands do
           ;;
       esac
     Desc
+    #curl -H 'X-VAULT-TOKEN: xxx' http://localhost:8200/v1/sys/init
   end
   
   desc '', 'init'
@@ -95,8 +96,8 @@ custom_commands do
     system <<~Desc
       docker exec -t #{container_name} vault operator init -status
       if [ $? = 2 ]; then
+        # avoid dangerous loss
         if [ -f #{keysfile} ]; then
-          # avoid dangerous loss
           bakfile=#{keysfile}-bak-#{Dklet::Util.human_timestamp}
           cp #{keysfile} $bakfile
         fi 
@@ -141,7 +142,7 @@ custom_commands do
 
   no_commands do
     def devmode?
-      env == 'dev'
+      env =~ /^dev/
     end
 
     def host_uri
@@ -166,3 +167,6 @@ custom_commands do
     end
   end
 end
+
+__END__
+
