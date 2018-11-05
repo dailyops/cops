@@ -7,6 +7,11 @@ https://www.vaultproject.io/
 https://github.com/hashicorp/vault
 https://www.vaultproject.io/docs/commands/index.html
 
+## todo
+
+* backup and disaster restore strategy
+* real usage in daily jenkins+ks practice 
+
 ## core concepts
 
 * root token just a special client token with init super admin permissions

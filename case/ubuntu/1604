@@ -18,3 +18,16 @@ write_dockerfile <<~Desc
   CMD bash
 Desc
 
+
+__END__
+
+## check root password is locked?
+
+https://askubuntu.com/questions/584847/how-do-i-check-if-my-root-password-login-is-disabled
+
+passwd -S  # is --status
+passwd -l root
+passwd -S  # locked if L
+# root L 11/02/2018 0 99999 7 -1
+
+passwd -S ubuntu

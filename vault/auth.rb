@@ -297,6 +297,12 @@ end
 
 __END__
 
+## token
+* VAULT_TOKEN env var
+* vault login <atoken> # this command will write the token into ~/.vault-token file by token helper automatically
+
+
+## Notes
 * token is the only vault identification mechanism about vault users
 * token like session id in website
 * default system ttl: 2764800 seconds = 32 days

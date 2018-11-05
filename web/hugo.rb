@@ -1,7 +1,7 @@
 #!/usr/bin/env rundklet
 add_note <<~Note
-  https://tls.ulfheim.net/
-  https://www.websecurity.symantec.com/zh/cn/security-topics/what-is-ssl-tls-https
+  https://gohugo.io/
+  todo
 Note
 
 # https://docs.docker.com/develop/develop-images/dockerfile_best-practices
@@ -25,4 +25,4 @@ custom_commands do
   end
 end
 
-# Generated with dklet version: 0.1.4
+__END__

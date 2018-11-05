@@ -9,13 +9,15 @@ Note
 register_net
 register :appname, :vault
 require_relative 'shared'
+require_relative 'audit'
 
 write_dockerfile <<~Desc
-  FROM vault:0.11.1
+  FROM vault:1.0.0-beta1
   LABEL <%=image_labels%>
   RUN apk add curl jq
 Desc
 
+# * run in vault user
 task :main do
   if devmode?
     # SKIP_SETCAP to skip setcap Memory Locking
@@ -43,11 +45,11 @@ task :main do
         -e VIRTUAL_HOST=#{proxy_domains(:vault)} \
         -e VIRTUAL_PORT=8200 \
         -v #{script_path}/config.hcl:/vault/config/config.hcl \
-        -v #{app_volumes}:/vault/file \
+        -v #{app_volumes}/filedata:/vault/file \
         #{docker_image} server
     Desc
 
-    sleep 0.5
+    sleep 1
     invoke :init
   end
 end
@@ -56,7 +58,7 @@ custom_commands do
   desc 'try', 'try command after login'
   option :put, type: :boolean, banner: 'first put info'
   def try
-    cmds = []
+    cmds = ["vault login #{root_token}"]
     cmds << <<~Desc if options[:put]
       vault kv put secret/try name=geek-#{Dklet::Util.human_timestamp}
     Desc
@@ -93,7 +95,7 @@ custom_commands do
   
   desc '', 'init'
   def init
-    system <<~Desc
+    system_run <<~Desc
       docker exec -t #{container_name} vault operator init -status
       if [ $? = 2 ]; then
         # avoid dangerous loss

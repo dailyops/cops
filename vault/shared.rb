@@ -20,8 +20,8 @@ custom_commands do
       vault login #{token}
       sh
     Desc
-    # to logout
-    # vault token revoke ?
+    # how to logout?
+    # remove ~/.vault-token file or reset VAULT_TOKEN env-var?
   end
   
   # id like database/creds/appuser/a5dfb8a5-a5ca-b1c9-74e0-d1b65678b48d
