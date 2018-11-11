@@ -48,6 +48,7 @@ task :main do
         -v #{app_volumes}/filedata:/vault/file \
         #{docker_image} server
     Desc
+    #  -config config.hcl
 
     sleep 1
     invoke :init

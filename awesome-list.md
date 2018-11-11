@@ -4,6 +4,10 @@
 
 * https://labs.play-with-docker.com/
 
+### powerful images
+
+* https://github.com/v2tec/watchtower to automatically sync image used by outline vpn project
+
 
 ## Docker Image Build
 

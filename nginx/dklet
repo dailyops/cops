@@ -3,45 +3,41 @@ add_note <<~Note
   https://hub.docker.com/_/nginx/
 Note
 
-register :host_port, 18080
-
-#https://docs.docker.com/engine/reference/builder/#usage
 write_dockerfile <<~Desc
   FROM nginx:1.15-alpine
   LABEL <%=image_labels%>
-  #COPY nginx.conf /etc/nginx/nginx.conf
-  #COPY static-html-directory /usr/share/nginx/html
   #CMD nginx -g 'daemon off;'
 Desc
 
 task :main do
   system_run <<~Desc
-    #{dkrun_cmd(named: true)} -d -p #{fetch(:host_port)}:80 \
+    #{dkrun_cmd(named: true)} -d -p :80 -p 443:443 \
       -v #{script_path}/conf/nginx.conf:/etc/nginx/nginx.conf \
+      -v #{script_path}/conf/conf.d:/etc/nginx/conf.d \
       -v #{script_path}/site/html:/usr/share/nginx/html \
+      -v #{volumes_root}/dev-openssl-default:/certs \
       #{docker_image}   
-    curl http://localhost:#{fetch(:host_port)}
-    docker logs -t --details #{container_name}
-    echo http://localhost:#{fetch(:host_port)}
   Desc
 end
 
 custom_commands do
-  desc 'try', ''
-  def try
-    cname = 'dkng1'
+  desc '', ''
+  def http
     system_run <<~Desc
-      #{dkrun_cmd} -d --name #{cname} -p 80 #{docker_image}   
-      docker ps -f ancestor=#{docker_image}
-      docker rm -f #{cname}
+      curl --head http://localhost:#{host_port_for(80)}
+    Desc
+  end
+
+  desc '', ''
+  def https
+    system_run <<~Desc
+      curl --insecure --head https://localhost:#{host_port_for(443)}
     Desc
   end
 end
 
 __END__
 
-docker run --name ng1 -v /some/content:/usr/share/nginx/html:ro -d nginx
-docker run --name ng1 -v /host/path/nginx.conf:/etc/nginx/nginx.conf:ro -d nginx
 docker cp dkng:/usr/share/nginx/html nginx/site/html
 
 # docker-compose.yml

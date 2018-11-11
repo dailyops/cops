@@ -26,8 +26,8 @@ __END__
 * Let’s Encrypt offers Domain Validation (DV) certificates. We do not offer Organization Validation (OV) or Extended Validation (EV) primarily because we cannot automate issuance for those types of certificates.
 * Let’s Encrypt certificates are standard Domain Validation certificates, so you can use them for any server that uses a domain name, like web servers, mail servers, FTP servers, and many more.
 
-
 ## how it works
+
 https://letsencrypt.org/how-it-works/
 
 ## Certbot 23k+ stars 
@@ -40,6 +40,5 @@ https://ietf-wg-acme.github.io/acme/draft-ietf-acme-acme.html
 
 ACME clients
 https://letsencrypt.org/docs/client-options/
-
 
 * https://github.com/jsha/minica

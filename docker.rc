@@ -17,7 +17,7 @@ alias dkps="docker ps -a"
 alias dkpl='docker pull'
 #alias dku="docker run --rm -ti ubuntu bash"
 dku(){
-  ~/dev/dailyops/kc/dklet/ubuntu1804 sh 
+  ${BOOTER_COPS_HOME}/case/ubuntu/1804 sh $@
 }
 #/bin/bash -c "while true; do date; sleep 6; done"
 # moby
