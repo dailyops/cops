@@ -80,14 +80,14 @@ custom_commands do
   end
 
   desc '', ''
-  def test
+  def localtest
     system_run <<~Desc
       docker cp #{script_path}/localhost.conf #{container_name}:/tmp/localhost.conf
     Desc
     container_run <<~Desc
       cd /certs
-      mkdir -p test
-      cd test
+      mkdir -p localtest
+      cd localtest
       openssl req -batch -x509 -nodes -days 365 -newkey rsa:2048 -keyout localhost.key -out localhost.crt -config /tmp/localhost.conf
       ls -l
     Desc

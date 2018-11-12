@@ -3,6 +3,9 @@ add_note <<~Note
   https://hub.docker.com/_/nginx/
 Note
 
+register :appname, 'nginx'
+register :certs_home, "#{volumes_root}/dev-openssl-default"
+
 write_dockerfile <<~Desc
   FROM nginx:1.15-alpine
   LABEL <%=image_labels%>
@@ -11,12 +14,13 @@ Desc
 
 task :main do
   system_run <<~Desc
-    #{dkrun_cmd(named: true)} -d -p :80 -p 443:443 \
+    #{dkrun_cmd(named: true)} -d -p :80 -p :443 \
       -v #{script_path}/conf/nginx.conf:/etc/nginx/nginx.conf \
       -v #{script_path}/conf/conf.d:/etc/nginx/conf.d \
       -v #{script_path}/site/html:/usr/share/nginx/html \
-      -v #{volumes_root}/dev-openssl-default:/certs \
+      -v #{certs_home}:/certs \
       #{docker_image}   
+    docker port #{container_name}
   Desc
 end
 
@@ -30,17 +34,23 @@ custom_commands do
 
   desc '', ''
   def https
+    # use a self signed certificate
     system_run <<~Desc
-      curl --insecure --head https://localhost:#{host_port_for(443)}
+      #curl --insecure --head https://localhost:#{host_port_for(443)}
+      curl --cacert #{certs_home}/localtest/localhost.crt --head https://localhost:#{host_port_for(443)}
     Desc
+  end
+
+  no_commands do
+    def certs_home
+      fetch(:certs_home)
+    end
   end
 end
 
 __END__
 
-docker cp dkng:/usr/share/nginx/html nginx/site/html
-
-# docker-compose.yml
+---
 web:
   image: nginx
   volumes:

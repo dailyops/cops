@@ -4,9 +4,11 @@ https://tls.ulfheim.net/
 https://www.websecurity.symantec.com/security-topics/what-is-ssl-tls-https
 https://github.com/paulczar/omgwtfssl
 
-## MacOS
+## MacOS  "钥匙串访问"应用
 
-* 钥匙串访问 应用 可以管理证书
+* 提供图形界面管理、生成证书，有证书助理
+* 可编辑对某个证书的授权策略，如“始终信任”
+* 不错，可读读联机帮助
 
 ## Notes
 
