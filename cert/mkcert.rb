@@ -6,9 +6,11 @@ add_note <<~Note
 Note
 
 task :main do
-  system_run <<~Desc
-    which mkcert || brew install mkcert
-  Desc
+  if Dklet::Util.on_mac?
+    system_run <<~Desc
+      which mkcert || brew install mkcert
+    Desc
+  end
 end
 
 custom_commands do

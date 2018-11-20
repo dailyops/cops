@@ -12,9 +12,10 @@ register :appname, :openssl
 write_dockerfile <<~Desc
   FROM alpine:3.7
   LABEL <%=image_labels%>
-  ENV PACKAGES "curl openssl ca-certificates"
+  ENV PACKAGES "curl openssl"
   RUN apk add --update $PACKAGES && rm -rf /var/cache/apk/*
 Desc
+#  ENV PACKAGES "curl openssl ca-certificates"
 
 task :main do
   system_run <<~Desc

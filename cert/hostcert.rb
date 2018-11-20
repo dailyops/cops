@@ -11,15 +11,18 @@ custom_commands do
   desc 'try', 'try'
   def try
     system_run <<~Desc
-      #{dktmprun} echo hi container #{container_name}
     Desc
   end
 
   desc '', 'To add a CA certificate'
-  def macos(certfile)
-    system_run <<~Desc
-      security add-trusted-cert -r trustRoot #{certfile}
-    Desc
+  def install(certfile)
+    if Dklet::Util.on_mac?
+      system_run <<~Desc
+        security add-trusted-cert -r trustRoot #{certfile}
+      Desc
+    else
+      puts "Todo to support #{RUBY_PLATFORM}"
+    end
   end
 end
 

@@ -5,19 +5,25 @@ add_note <<~Note
 Note
 
 # https://hub.docker.com/r/governmentpaas/curl-ssl/
+# https://github.com/Neilpang/acme.sh
 write_dockerfile <<~Desc
-  FROM alpine:3.7
-  LABEL <%=image_labels%>
-  ENV PACKAGES "curl openssl ca-certificates"
-  RUN apk add --update $PACKAGES && rm -rf /var/cache/apk/*
 Desc
 
 custom_commands do
   desc '', ''
   def rand(num = 32)
     container_run <<~Desc, tmp: true
-      openssl rand -base64 #{num}
     Desc
+  end
+
+  desc '', ''
+  def install
+    if Dklet::Util.host_os.mac?
+      system <<~Desc
+        brew install certbot
+      Desc
+    else
+    end
   end
 end
 
