@@ -15,7 +15,7 @@ register_docker_image "redis:4.0-alpine"
 
 task :main do
   system <<~Desc
-    #{dkrun_cmd} --name #{container_name} -d --restart always \
+    #{dkrun_cmd(named: true)} -d --restart always \
       -v #{app_volumes}:/data \
       #{docker_image} redis-server --appendonly yes
       # --loglevel warning --requirepass pswd
