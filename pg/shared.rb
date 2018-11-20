@@ -6,7 +6,7 @@ task :main do
 
   system <<~Desc
     #{dkrun_cmd(named: true)} -d #{'--restart always' if in_prod?} \
-      -u postgres -p :5432 \
+      -p :5432 \
       -e POSTGRES_PASSWORD=#{initpwd} \
       -v #{script_path}/conf/postgresql.conf:/etc/postgresql/postgresql.conf \
       -v #{app_volumes}/dbdata:/var/lib/postgresql/data \
@@ -14,6 +14,7 @@ task :main do
       #{docker_image} -c 'config_file=/etc/postgresql/postgresql.conf'
       # -c 'shared_buffers=256MB' -c 'max_connections=200'
   Desc
+  # -u postgres # has permission bugs when volumes mount
   
   t0 = Time.now
   until system("docker exec #{ops_container} pg_isready > /dev/null")
