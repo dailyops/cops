@@ -6,7 +6,7 @@ task :main do
 
   system <<~Desc
     #{dkrun_cmd(named: true)} -d #{'--restart always' if in_prod?} \
-      -p :5432 \
+      -p #{ENV['PORT']}:5432 \
       -e POSTGRES_PASSWORD=#{initpwd} \
       -v #{script_path}/conf/postgresql.conf:/etc/postgresql/postgresql.conf \
       -v #{app_volumes}/dbdata:/var/lib/postgresql/data \
@@ -40,7 +40,7 @@ custom_commands do
 
   desc 'psql', ''
   def psql(*args)
-    container_run "psql -a #{args.join(' ')}"
+    container_run "psql -U postgres -a #{args.join(' ')}"
   end
 
   desc '', ''
