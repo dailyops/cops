@@ -10,16 +10,16 @@ Note
 
 register_net
 register :appname, 'nginx-proxy'
+register_docker_image 'jwilder/nginx-proxy:alpine-0.7.0'
 
 write_specfile <<~Desc
   version: '2'
   services:
     nginx-proxy:
-      image: jwilder/nginx-proxy:alpine-0.7.0
-      container_name: #{container_name}
+      image: <%=docker_image%>
       restart: always
       environment:
-        - DEFAULT_HOST=portainer.lh
+        - DEFAULT_HOST=<%=proxy_domains(:portainer)%>
       ports:
         - "80:80"
       volumes:
