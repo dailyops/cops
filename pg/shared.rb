@@ -81,13 +81,19 @@ custom_commands do
     Desc
   end
 
-  desc 'appuser PASSWORD [USER]', 'create a dbuser for app eg. rails'
-  def appuser(passwd, user='appuser')
+  desc 'appuser USER PASSWORD', 'create a dbuser for app eg. rails'
+  def appuser(user, passwd = nil)
+    unless passwd
+      passwd = Dklet::Util.gen_password(20)
+      passwd1 = ask("Use password: #{passwd} or input new:")
+      passwd = passwd1 if passwd1.length > 0
+    end
     container_run <<~Desc
       cat <<-SQL | psql
         CREATE USER #{user} with CREATEDB PASSWORD '#{passwd}';
       SQL
     Desc
+    puts "create user: #{user}:#{passwd}"
   end
 
   desc '', 'test if password changed after inited'
