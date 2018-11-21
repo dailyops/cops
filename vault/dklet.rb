@@ -157,7 +157,7 @@ custom_commands do
     end
 
     def keysfile
-      dklet_config_for("init-keys.json")
+      app_config_for("init-keys.json")
     end
 
     def conf_hash

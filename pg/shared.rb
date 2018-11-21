@@ -1,4 +1,6 @@
 require 'json'
+# handle postgres user problem
+register :docker_exec_opts, '-u postgres'
 
 task :main do
   write_init_config
@@ -25,32 +27,35 @@ task :main do
 end
 
 custom_commands do
-  desc 'config', ''
+  desc 'config', 'show init config'
   def config
     pp init_config
   end
 
-  desc '', ''
-  option :edit, type: :boolean
+  desc 'write_config', 'write init config firstly'
+  option :edit, type: :boolean, aliases: [:m] # -e has taken by env
   def write_config
     write_init_config
     system "vi #{init_config_file}" if options[:edit]
     puts "config file: #{init_config_file}"
   end
 
-  desc 'psql', ''
+  desc 'psql', 'enter psql session'
+  option :dba, type: :boolean, banner: 'use dba user'
   def psql(*args)
-    container_run "psql -U postgres -a #{args.join(' ')}"
+    cmds = if options[:dba]
+        "psql -U dbauser -a #{args.join(' ')} postgres"
+      else
+        "psql -a #{args.join(' ')}"
+      end
+    container_run cmds
   end
+  map 'sql' => 'psql'
 
-  desc '', ''
-  def dbasql(*args)
-    container_run "psql -U dbauser -a #{args.join(' ')} postgres"
-  end
-
-  desc '', ''
+  desc 'dbaurl [DB]', 'show dba connection url'
   def dbaurl(db = 'postgres')
-    puts "postgres://#{config_for('dba_user')}:#{config_for('dba_password')}@localhost:#{host_port_for(5432)}/#{db}"
+    url = "postgres://#{config_for('dba_user')}:#{config_for('dba_password')}@0.0.0.0:#{host_port_for(5432)}/#{db}"
+    puts url
   end
 
   desc 'sampleconf', ''
@@ -69,15 +74,15 @@ custom_commands do
     Desc
   end
  
-  desc 'user', ''
+  desc 'users', ''
   def users
     container_run <<~Desc
       psql -c '\\du'
     Desc
   end
 
-  desc 'create_user USER PASSWORD', 'create a dbuser for app eg. rails'
-  def create_user(user, passwd)
+  desc 'appuser PASSWORD [USER]', 'create a dbuser for app eg. rails'
+  def appuser(passwd, user='appuser')
     container_run <<~Desc
       cat <<-SQL | psql
         CREATE USER #{user} with CREATEDB PASSWORD '#{passwd}';
@@ -117,7 +122,7 @@ custom_commands do
   
   no_commands do
     def init_config_file
-      dklet_config_for('init-config.json')
+      app_config_for('init-config.json')
     end
 
     def init_config
