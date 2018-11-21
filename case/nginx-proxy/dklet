@@ -46,9 +46,10 @@ end
 custom_commands do
   desc 'config', 'list dynamic nginx config'
   def config
-    system <<~Desc
-      docker exec #{container_name} cat /etc/nginx/conf.d/default.conf
+    container_run <<~Desc
+      cat /etc/nginx/conf.d/default.conf
     Desc
+   
   end
 
   desc 'test', 'test domains'
