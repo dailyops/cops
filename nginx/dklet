@@ -4,7 +4,6 @@ add_note <<~Note
 Note
 
 register :appname, 'nginx'
-register :certs_home, "#{volumes_root}/dev-openssl-default"
 
 write_dockerfile <<~Desc
   FROM nginx:1.15-alpine
@@ -43,7 +42,7 @@ custom_commands do
 
   no_commands do
     def certs_home
-      fetch(:certs_home)
+      find_app_volumes('dev', 'openssl')
     end
   end
 end
