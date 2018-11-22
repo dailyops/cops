@@ -19,7 +19,7 @@ write_specfile <<~Desc
       image: <%=docker_image%>
       restart: always
       environment:
-        - DEFAULT_HOST=<%=proxy_domains(:portainer)%>
+        - DEFAULT_HOST=<%=proxy_base_domain%>
       ports:
         - "80:80"
       volumes:
