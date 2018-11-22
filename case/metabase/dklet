@@ -9,23 +9,21 @@ Note
 
 register_net
 register :appname, 'metabase'
-register_domain :bi, :metabase
-
+#register_docker_image "metabase/metabase:v0.30.4"
 write_dockerfile <<~Desc
   FROM metabase/metabase:v0.30.4
-  LABEL <%=image_labels%>
+  RUN apk add --no-cache postgresql
 Desc
 
 task :main do
-  # require db pre created!!!
-  dburl = "postgres://postgres:password@#{env}_pg_default:5432/metabase"
-  # test connect in the container???
+  check_env!
+
   system_run <<~Desc
-    #{dkrun_cmd(named: true)} -d #{'--restart=always' if env == 'prod'} \
+    #{dkrun_cmd(named: true)} -d #{'--restart=always' if in_prod? } \
       -p :3000 \
       -e "JAVA_TIMEZONE=Asia/Shanghai" \
-      -e MB_DB_CONNECTION_URI=#{dburl} \
-      -e VIRTUAL_HOST=#{proxy_domains} \
+      -e VIRTUAL_HOST=#{proxy_domains(:bi)} \
+      --env-file #{default_env_file} \
       #{docker_image}
   Desc
 end
@@ -39,6 +37,34 @@ custom_commands do
     url = "http://#{host}"
     puts url
     system "open #{url}" unless options[:dry]
+  end
+
+  desc 'config', ''
+  def config
+    puts default_env_file
+    puts default_env_file.read 
+  rescue 
+    puts "No configed"
+  end
+
+  no_commands do
+    def default_env_file
+      app_config_for("default.env")
+    end
+
+    def check_env!
+      unless default_env_file.exist?
+        say "Give db url like postgres://dbauser:dbapassword@prod-pg-default/metabase"
+        dburl = ask("Your db url:").chomp.strip
+        if dburl.length < 10 # reasonable?
+          abort "Seems invalid url: #{dburl}"
+        end
+        default_env_file.write <<~Desc
+          # please first create db
+          MB_DB_CONNECTION_URI=#{dburl} 
+        Desc
+      end
+    end
   end
 end
 
