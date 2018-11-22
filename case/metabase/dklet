@@ -1,105 +1,27 @@
 #!/usr/bin/env rundklet
 add_note <<~Note
-  make metabase handy
-  https://hub.docker.com/r/metabase/metabase/
-  https://github.com/metabase/metabase
-  https://www.metabase.com/docs/latest/operations-guide/running-metabase-on-docker.html
-  https://www.metabase.com/docs/latest/troubleshooting-guide/running.html
+  use metabase with default H2db Java based
 Note
 
 register_net
 register :appname, 'metabase'
-#register_docker_image "metabase/metabase:v0.30.4"
-write_dockerfile <<~Desc
-  FROM metabase/metabase:v0.30.4
-  RUN apk add --no-cache postgresql
-Desc
+register_docker_image "metabase/metabase:v0.30.4"
 
 task :main do
-  check_env!
-
   system_run <<~Desc
-    #{dkrun_cmd(named: true)} -d #{'--restart=always' if in_prod? } \
-      -p :3000 \
-      -e "JAVA_TIMEZONE=Asia/Shanghai" \
+    #{dkrun_cmd(named: true)} -d \
+      -p 3000 \
       -e VIRTUAL_HOST=#{proxy_domains(:bi)} \
-      --env-file #{default_env_file} \
+      -e "JAVA_TIMEZONE=Asia/Shanghai" \
+      -e MB_DB_FILE=/metabase-data/metabase.db \
+      -v #{app_volumes}:/metabase-data \
       #{docker_image}
   Desc
 end
 
-custom_commands do
-  desc 'open', 'open ui'
-  option :host, type: :boolean, banner: 'use host net ip', aliases: [:h]
-  def open
-    host = proxy_domains(:bi)
-    host = "#{host_with_port_for(3000)}" if options[:host]
-    url = "http://#{host}"
-    puts url
-    system "open #{url}" unless options[:dry]
-  end
-
-  desc 'config', ''
-  def config
-    puts default_env_file
-    puts default_env_file.read 
-  rescue 
-    puts "No configed"
-  end
-
-  no_commands do
-    def default_env_file
-      app_config_for("default.env")
-    end
-
-    def check_env!
-      unless default_env_file.exist?
-        say "Give db url like postgres://dbauser:dbapassword@prod-pg-default/metabase"
-        dburl = ask("Your db url:").chomp.strip
-        if dburl.length < 10 # reasonable?
-          abort "Seems invalid url: #{dburl}"
-        end
-        default_env_file.write <<~Desc
-          # please first create db
-          MB_DB_CONNECTION_URI=#{dburl} 
-        Desc
-      end
-    end
-  end
-end
-
 __END__
 
--e JAVA_TIMEZONE=US/Pacific
--e "JAVA_TOOL_OPTIONS=-Xmx2g"
+Why should use this?
 
----
-# compose format
-version: '2'
-services:
-  metabase:
-    restart: always
-    image: metabase/metabase
-    container_name: metabase
-    expose:
-      - :3000
-    environment:
-    - MB_DB_TYPE=postgres
-    - MB_DB_DBNAME=metabase
-    - MB_DB_PORT=5432 
-    - MB_DB_USER=postgres
-    - MB_DB_PASS=
-    - MB_DB_HOST=pgdb
-    - JAVA_TIMEZONE=Asia/Shanghai
-
-# docker run way
-#{dkrun_cmd(named: true)} -d --restart=always \
-  -p 3000 \
-  -e "MB_DB_TYPE=postgres" \
-  -e "MB_DB_DBNAME=metabase" \
-  -e "MB_DB_PORT=5432" \
-  -e "MB_DB_USER=postgres" \
-  -e "MB_DB_PASS=password" \
-  -e "MB_DB_HOST=prod_pg_default" \
-  -e "JAVA_TIMEZONE=Asia/Shanghai" \
-  #{docker_image}
+* official support
+* keep easy
