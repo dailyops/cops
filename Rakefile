@@ -3,8 +3,8 @@ task :test do
   system <<~Desc
     dklet/try main
     dklet/try clean
-    db/pg106/dklet main
-    db/pg106/dklet clean
+    db/pg111/dklet main
+    db/pg111/dklet clean
   Desc
 end
 
@@ -13,7 +13,7 @@ task :dailyops do
     case/nginx-proxy/dklet -e prod
     case/gemstash/dklet -e prod
     case/portainer/dklet -e prod
-    db/pg/pg106 -e prod
+    db/pg/pg111 -e prod
     db/redis/dklet -e prod
     #db/metabase/dklet -e prod
     #vault/dklet.rb -e prod
