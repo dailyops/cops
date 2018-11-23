@@ -90,7 +90,7 @@ custom_commands do
   desc 'dbs', 'list dbs'
   def dbs
     container_run <<~Desc
-      psql -c '\\du'
+      psql -c '\\l'
     Desc
   end
 
