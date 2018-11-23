@@ -233,3 +233,7 @@ linkto user home xxx
 # minikube start --help
 
 docker plugin install --grant-all-permissions vieux/sshfs
+
+## docker login
+Error response from daemon: Get https://registry-1.docker.io/v2/metabase/metabase/manifests/v0.31.1: unauthorized: incorrect username or password
+

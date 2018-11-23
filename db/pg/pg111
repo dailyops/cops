@@ -1,0 +1,5 @@
+#!/usr/bin/env rundklet
+register_net
+register :appname, "pg111"
+register_docker_image "postgres:11.1-alpine"
+require_relative 'shared'

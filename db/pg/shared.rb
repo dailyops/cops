@@ -17,16 +17,31 @@ task :main do
       # -c 'shared_buffers=256MB' -c 'max_connections=200'
   Desc
   # -u postgres # has permission bugs when volumes mount
-  
-  t0 = Time.now
-  until system("docker exec #{ops_container} pg_isready > /dev/null")
-    puts "waiting for initdb..."
-    sleep 1
-  end
-  puts "wait taken #{Time.now - t0} seconds"
 end
 
 custom_commands do
+  desc 'readycheck', 'check server is ready?'
+  def readycheck
+    t0 = Time.now
+    until system("docker exec #{ops_container} pg_isready > /dev/null")
+      puts "waiting for initdb..."
+      sleep 1
+    end
+    puts "wait taken #{Time.now - t0} seconds"
+  end
+
+  desc 'psql', 'enter psql session'
+  option :dba, type: :boolean, banner: 'use dba user'
+  def psql(*args)
+    cmds = if options[:dba]
+        "psql -U dbauser -a #{args.join(' ')} postgres"
+      else
+        "psql -a #{args.join(' ')}"
+      end
+    container_run cmds
+  end
+
+  map 'sql' => 'psql'
   desc 'config', 'show init config'
   def config
     pp init_config
@@ -40,21 +55,12 @@ custom_commands do
     puts "config file: #{init_config_file}"
   end
 
-  desc 'psql', 'enter psql session'
-  option :dba, type: :boolean, banner: 'use dba user'
-  def psql(*args)
-    cmds = if options[:dba]
-        "psql -U dbauser -a #{args.join(' ')} postgres"
-      else
-        "psql -a #{args.join(' ')}"
-      end
-    container_run cmds
-  end
-  map 'sql' => 'psql'
-
   desc 'dbaurl [DB]', 'show dba connection url'
+  option :host, type: :boolean
   def dbaurl(db = 'postgres')
-    url = "postgres://#{config_for('dba_user')}:#{config_for('dba_password')}@0.0.0.0:#{host_port_for(5432)}/#{db}"
+    h = container_name
+    h = host_with_port_for(5432, host_ip: false) if options[:host]
+    url = "postgres://#{config_for('dba_user')}:#{config_for('dba_password')}@#{h}/#{db}"
     puts url
   end
 
@@ -74,14 +80,22 @@ custom_commands do
     Desc
   end
  
-  desc 'users', ''
+  desc 'users', 'list users'
   def users
     container_run <<~Desc
       psql -c '\\du'
     Desc
   end
 
+  desc 'dbs', 'list dbs'
+  def dbs
+    container_run <<~Desc
+      psql -c '\\du'
+    Desc
+  end
+
   desc 'appuser USER PASSWORD', 'create a dbuser for app eg. rails'
+  option :super, type: :boolean, banner: 'is superuser'
   def appuser(user, passwd = nil)
     unless passwd
       passwd = Dklet::Util.gen_password(20)
@@ -90,7 +104,7 @@ custom_commands do
     end
     container_run <<~Desc
       cat <<-SQL | psql
-        CREATE USER #{user} with CREATEDB PASSWORD '#{passwd}';
+        CREATE USER #{user} with #{'superuser' if options[:super]} CREATEDB PASSWORD '#{passwd}';
       SQL
     Desc
     puts "create user: #{user}:#{passwd}"
@@ -144,10 +158,17 @@ custom_commands do
     end
 
     def gen_init_config
+      if in_dev?
+        password = 'password'
+        dbapassword = 'password'
+      else
+        password = Dklet::Util.gen_password(20)
+        dbapassword = Dklet::Util.gen_password(20)
+      end
       { 
-        init_password: Dklet::Util.gen_password(20),
+        init_password: password,
         dba_user: 'dbauser',
-        dba_password: Dklet::Util.gen_password(20)
+        dba_password: dbapassword 
       }
     end
 

@@ -1,0 +1,121 @@
+#!/usr/bin/env rundklet
+add_note <<~Note
+  use metabase with external pg storage
+Note
+
+register_net
+register :appname, 'metabase'
+register_docker_image "metabase/metabase:v0.31.1"
+
+task :main do
+  ####################################
+  #    test db connection!
+  # bad cases
+  #url = "postgres://dbauser:password@dev-pg106-default:5432/metabase"
+  #url = "postgres://dev-pg106-default/metabase?user=dbauser&password=password"
+  # ok cases 要端口号!!!
+  #url = "postgres://dev-pg106-default:5432/metabase?user=dbauser&password=password"
+  #url = "postgres://dev-pg111-default:5432/metabase?user=dbauser&password=password"
+  #dburl_file.write url
+
+  check_dburl!
+
+  system_run <<~Desc
+    #{dkrun_cmd(named: true)} -d #{'--restart=always' if in_prod? } \
+      -p :3000 \
+      -e VIRTUAL_HOST=#{proxy_domains(:bi)} \
+      -e "JAVA_TIMEZONE=Asia/Shanghai" \
+      -e "MB_DB_CONNECTION_URI=#{get_dburl}" \
+      -e MB_PASSWORD_COMPLEXITY=strong \
+      -e MB_PASSWORD_LENGTH=10 \
+      #{docker_image}
+    #docker logs #{container_name}
+  Desc
+end
+
+custom_commands do
+  desc 'config', ''
+  def config
+    puts dburl_file
+    puts dburl_file.read 
+  rescue 
+    puts "No configed"
+  end
+
+  desc '', 'test db connectable in a container in same network'
+  option :image, banner: 'pg client to use'
+  def dbtest
+    img = options[:image] || "postgres:10.6-alpine"
+    cmds = <<~Desc
+      docker run --rm -it --net #{netname} #{img} psql -c '\\d' '#{get_dburl}'
+      echo maybe you want to run below: 
+      echo "docker exec -it #{container_name} 'nc -v prod-pg-default 5432'"
+    Desc
+    puts cmds
+    system cmds
+  end
+
+  no_commands do
+    def dburl_file
+      app_config_for("dburl.key")
+    end
+
+    def get_dburl
+      dburl_file.read.chomp
+    end
+
+    def check_dburl!
+      unless dburl_file.exist?
+        say "Give db url like below:"
+        say "postgres://prod-pg-default:5432/metabase?user=dbauser&password=password"
+        dburl = ask("Your db url:").chomp.strip
+        if dburl.length < 10 # reasonable?
+          abort "Seems invalid url: #{dburl}"
+        end
+        dburl_file.write dburl 
+      end
+    end # def
+  end # no_commands
+end
+
+__END__
+
+## Some notes:
+
+* maybe meet not compatible with your current pg 
+* should use standalone pg?
+* not recommanded way now!
+
+-e JAVA_TIMEZONE=US/Pacific
+-e "JAVA_TOOL_OPTIONS=-Xmx2g"
+
+---
+# compose format
+version: '2'
+services:
+  metabase:
+    restart: always
+    image: metabase/metabase
+    container_name: metabase
+    expose:
+      - :3000
+    environment:
+    - MB_DB_TYPE=postgres
+    - MB_DB_DBNAME=metabase
+    - MB_DB_PORT=5432 
+    - MB_DB_USER=postgres
+    - MB_DB_PASS=
+    - MB_DB_HOST=pgdb
+    - JAVA_TIMEZONE=Asia/Shanghai
+
+## docker run way
+#{dkrun_cmd(named: true)} -d --restart=always \
+  -p 3000 \
+  -e "MB_DB_TYPE=postgres" \
+  -e "MB_DB_DBNAME=metabase" \
+  -e "MB_DB_PORT=5432" \
+  -e "MB_DB_USER=postgres" \
+  -e "MB_DB_PASS=password" \
+  -e "MB_DB_HOST=prod_pg_default" \
+  -e "JAVA_TIMEZONE=Asia/Shanghai" \
+  #{docker_image}

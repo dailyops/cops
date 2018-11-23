@@ -1,19 +1,21 @@
 #!/usr/bin/env rundklet
 add_note <<~Note
-  use metabase with default H2db Java based
+  use metabase with default embedded H2 database(Java based)
 Note
 
 register_net
-register :appname, 'metabase'
-register_docker_image "metabase/metabase:v0.30.4"
+register :appname, 'metabase-h2'
+register_docker_image "metabase/metabase:v0.31.1"
 
 task :main do
   system_run <<~Desc
     #{dkrun_cmd(named: true)} -d \
       -p 3000 \
-      -e VIRTUAL_HOST=#{proxy_domains(:bi)} \
+      -e VIRTUAL_HOST=#{proxy_domains(:h2bi)} \
       -e "JAVA_TIMEZONE=Asia/Shanghai" \
       -e MB_DB_FILE=/metabase-data/metabase.db \
+      -e MB_PASSWORD_COMPLEXITY=strong \
+      -e MB_PASSWORD_LENGTH=10 \
       -v #{app_volumes}:/metabase-data \
       #{docker_image}
   Desc
