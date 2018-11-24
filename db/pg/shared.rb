@@ -56,7 +56,7 @@ custom_commands do
   end
 
   desc 'dbaurl [DB]', 'show dba connection url'
-  option :host, type: :boolean
+  option :host, type: :boolean, aliases: [:h]
   def dbaurl(db = 'postgres')
     h = container_name
     h = host_with_port_for(5432, host_ip: false) if options[:host]

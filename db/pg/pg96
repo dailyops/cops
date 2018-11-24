@@ -1,5 +1,5 @@
 #!/usr/bin/env rundklet
 register_net
-register :appname, "pg"
+register :appname, "pg96"
 register_docker_image "postgres:9.6-alpine"
 require_relative 'shared'
