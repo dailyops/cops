@@ -10,7 +10,7 @@ end
 
 task :dailyops do
   system <<~Desc
-    case/nginx-proxy/dklet -e prod
+    nginx-proxy/dklet -e prod
     case/gemstash/dklet -e prod
     case/portainer/dklet -e prod
     db/pg/pg111 -e prod

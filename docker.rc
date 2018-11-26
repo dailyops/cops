@@ -78,10 +78,12 @@ alias dcom='docker-compose'
 # 容器清理
 # http://www.doublecloud.org/2015/05/simple-script-to-list-and-remove-all-stopped-docker-containers/
 function dkrm(){
-  exit_code=${1:-0}
-  #cmd="docker ps -aq --filter 'exited=${exit_code}'"
-  #ids="`$cmd`"
-  ids=$(docker ps -aq --filter "exited=${exit_code}")
+  if [ $# -lt 1 ]; then
+    ids=$(docker ps -aq --filter "status=exited")
+  else
+    exit_code=${1:-0}
+    ids=$(docker ps -aq --filter "exited=${exit_code}")
+  fi
   if [ -n "$ids" ];then
     docker rm -v $ids
     echo ==removed containers ids: $ids by: 
