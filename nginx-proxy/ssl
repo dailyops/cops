@@ -11,7 +11,7 @@ register_net
 register :appname, 'nginx-proxy'
 register_docker_image 'jwilder/nginx-proxy:alpine-0.7.0'
 
-task :main, preclean: false do
+task :main do
   certs_path = app_volumes.join("certs")
   cmds = <<~Desc
     #{dkrun_cmd(named: true)} -d \
