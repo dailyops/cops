@@ -57,10 +57,15 @@ custom_commands do
 
   desc 'dbaurl [DB]', 'show dba connection url'
   option :host, type: :boolean, aliases: [:h]
+  option :classical, type: :boolean, aliases: [:c]
   def dbaurl(db = 'postgres')
     h = container_name
     h = host_with_port_for(5432, host_ip: false) if options[:host]
-    url = "postgres://#{config_for('dba_user')}:#{config_for('dba_password')}@#{h}/#{db}"
+    if options[:classical]
+      url = "postgres://#{config_for('dba_user')}:#{config_for('dba_password')}@#{h}/#{db}"
+    else
+      url = "postgres://#{h}/#{db}?user=#{config_for('dba_user')}&password=#{config_for('dba_password')}"
+    end
     puts url
   end
 

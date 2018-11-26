@@ -3,7 +3,6 @@ add_note <<~Note
   Automated nginx proxy for Docker containers using docker-gen
   https://github.com/jwilder/nginx-proxy
   https://hub.docker.com/r/jwilder/nginx-proxy/
-
   ssl support
   https://github.com/JrCs/docker-letsencrypt-nginx-proxy-companion
 Note
@@ -12,27 +11,7 @@ register_net
 register :appname, 'nginx-proxy'
 register_docker_image 'jwilder/nginx-proxy:alpine-0.7.0'
 
-#write_specfile <<~Desc
-  #version: '2'
-  #services:
-    #nginx-proxy:
-      #image: <%=docker_image%>
-      #restart: always
-      #environment:
-        #- DEFAULT_HOST=<%=proxy_base_domain%>
-      #ports:
-        #- "80:80"
-      #volumes:
-        #- /var/run/docker.sock:/tmp/docker.sock:ro
-  #networks:
-    #default:
-      #external:
-        #name: #{netname}
-#Desc
-
 task :main, preclean: false do
-  #invoke :netup, [], {}
-
   certs_path = app_volumes.join("certs")
   cmds = <<~Desc
     #{dkrun_cmd(named: true)} -d \
@@ -44,20 +23,24 @@ task :main, preclean: false do
       -v /var/run/docker.sock:/tmp/docker.sock:ro \
       --label com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy \
       #{docker_image}
-
-    #{dkrun_cmd} -d \
-      --name #{ssl_container_name} \
-      -v #{certs_path}:/etc/nginx/certs:rw \
-      -v /var/run/docker.sock:/var/run/docker.sock:ro \
-      --volumes-from #{container_name} \
-      jrcs/letsencrypt-nginx-proxy-companion:v1.9.1
   Desc
+  #- DEFAULT_HOST=<%=proxy_base_domain%>
+  if ssl_nginx_proxy?
+    cmds << <<~Desc
+      #{dkrun_cmd} -d \
+        --name #{ssl_container_name} \
+        -v #{certs_path}:/etc/nginx/certs:rw \
+        -v /var/run/docker.sock:/var/run/docker.sock:ro \
+        --volumes-from #{container_name} \
+        jrcs/letsencrypt-nginx-proxy-companion:v1.9.1
+    Desc
+  end
 
   system_run cmds
 end
 
 before_task :clean do
-  system <<~Desc
+  system <<~Desc if ssl_nginx_proxy?
     docker rm -f #{ssl_container_name}
   Desc
 end
@@ -75,9 +58,7 @@ custom_commands do
     cname = 'nginx-proxy-ssl-test'
     system_run <<~Desc
       #{dkrun_cmd} --name #{cname} -d \
-        -e VIRTUAL_HOST=#{proxy_domains(:whoami)} \
-        -e LETSENCRYPT_HOST=#{proxy_domains(:whoami)} \
-        -e "LETSENCRYPT_EMAIL=cao7113@hotmail.com" \
+        -e #{proxy_domain_env_for(:whoami)} \
         jwilder/whoami
       sleep 3
       curl -Lv https://#{proxy_domains(:whoami)}
@@ -90,10 +71,10 @@ custom_commands do
     cname = 'nginx-proxy-test'
     system_run <<~Desc
       #{dkrun_cmd} --name #{cname} -d \
-        -e VIRTUAL_HOST=#{proxy_domains(:whoami)} \
+        -e VIRTUAL_HOST=#{proxy_domains(:whoami1)} \
         jwilder/whoami
       sleep 3
-      curl http://#{proxy_domains(:whoami)}
+      curl http://#{proxy_domains(:whoami1)}
       docker rm -f #{cname}
     Desc
   end

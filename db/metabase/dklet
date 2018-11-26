@@ -22,8 +22,8 @@ task :main do
 
   system_run <<~Desc
     #{dkrun_cmd(named: true)} -d #{'--restart=always' if in_prod? } \
-      -p :3000 \
-      -e VIRTUAL_HOST=#{proxy_domains(:bi)} \
+      -p 3000 \
+      -e #{proxy_domain_env_for(:bi)} \
       -e "JAVA_TIMEZONE=Asia/Shanghai" \
       -e "MB_DB_CONNECTION_URI=#{get_dburl}" \
       -e MB_PASSWORD_COMPLEXITY=strong \
