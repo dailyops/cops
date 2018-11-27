@@ -15,7 +15,7 @@ task :main do
     #{dkrun_cmd(named: true)} -d \
       -p 3000 \
       -v #{script_path}:/src \
-      #{docker_image} node hello-server.js
+      #{docker_image} node server.js
   Desc
 end
 
