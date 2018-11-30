@@ -55,11 +55,15 @@ function dktry(){
 }
 
 function dksh(){
+  docker run --rm -it ${1:-alpine:3.7} ${2:-sh}
+}
+
+function dkbsh(){
   docker run --rm -it ${1:-busybox} ${2:-sh}
 }
 
 function dkbash(){
-  docker run --rm -ti ${1:-ubuntu} bash
+  docker run --rm -it ${1:-ubuntu} bash
 }
 
 # 进入容器
@@ -225,6 +229,11 @@ dnetps(){
   docker network inspect -f '{{ range $key, $value := .Containers }}{{ printf "%s\n" $value.Name }}{{ end }}' $@
 }
 
+dklogin(){
+  [ $# -lt 1 ] && echo require password && return 1
+  echo $1 | docker login -u cao7113 --password-stdin
+}
+
 return 0
 
 ## volumes
@@ -235,7 +244,4 @@ linkto user home xxx
 # minikube start --help
 
 docker plugin install --grant-all-permissions vieux/sshfs
-
-## docker login
-Error response from daemon: Get https://registry-1.docker.io/v2/metabase/metabase/manifests/v0.31.1: unauthorized: incorrect username or password
 

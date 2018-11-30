@@ -1,0 +1,60 @@
+#!/usr/bin/env ruby
+require 'bundler/inline'
+gemfile do
+  source ENV['GEM_SOURCE'] || 'https://rubygems.org'
+  gem "byebug"
+  gem "thor"
+end
+require 'byebug'
+require 'thor'
+require 'yaml'
+
+class MyimagesCLI < Thor
+  #include Thor::Actions
+  default_command 'list'
+
+  desc 'which', 'this command path'
+  def which
+    puts Pathname(__FILE__)
+  end
+
+  desc 'vi', 'vi command'
+  def vi
+    exec "vi + #{__FILE__}"
+  end
+
+  desc 'pull', 'pull images'
+  def pull
+    cmds = local_images.map{|i| "docker pull #{i}"}.join("; \n")
+    puts "==run commands:"
+    puts cmds
+    system cmds
+  end
+
+  desc 'list', 'list my local images'
+  def list
+    pp local_images
+  end
+  map 'ls' => 'list'
+
+  no_tasks do
+    def my_path
+      Pathname(__dir__)
+    end
+
+    def local_images
+      local_config['images'] || []
+    end
+
+    def local_config
+      return {} unless images_file.exist?
+      YAML.load_file(images_file)
+    end
+
+    def images_file
+      Pathname("~/.docker-images.yml").expand_path
+    end
+  end
+end
+
+MyimagesCLI.start
