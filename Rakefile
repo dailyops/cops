@@ -12,7 +12,7 @@ task :dailyops do
   system <<~Desc
     dkl netup dailyops
     nginx-proxy/dklet -e prod
-    case/gemstash/dklet -e prod
+    ruby/gemstash/dklet -e prod
     case/portainer/dklet -e prod
     db/pg/pg111 -e prod
     db/redis/dklet -e prod

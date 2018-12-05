@@ -1,0 +1,17 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    cgem (0.1.7)
+      bundler
+      thor
+    thor (0.20.3)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  cgem
+  thor
+
+BUNDLED WITH
+   1.16.2
