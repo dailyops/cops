@@ -1,6 +1,6 @@
 #!/usr/bin/env rundklet
 add_note <<~Note
-  todo test volume data migrate
+  test files methods
 Note
 
 # https://docs.docker.com/develop/develop-images/dockerfile_best-practices
@@ -9,10 +9,20 @@ write_dockerfile <<~Desc
   LABEL <%=image_labels%>
 Desc
 
-task :main do
-  system_run <<~Desc
-    #{dkrun_cmd(named: true)} -d #{docker_image}
-    # #{compose_cmd} up -d
+set_file_for :test1, <<~Desc
+  FROM alipine:3.7
+Desc
+
+rendering <<~Desc, path: "/tmp/t1"
+  test
+Desc
+
+task :main, build: false do
+  puts rendered_file_for(:test1)
+  puts File.read(rendered_file_for(:test1))
+
+  system <<~Desc
+    cat #{rendered_file_for(:test1)}
   Desc
 end
 
@@ -24,3 +34,5 @@ custom_commands do
     Desc
   end
 end
+
+__END__

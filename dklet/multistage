@@ -4,13 +4,12 @@ add_note <<~Note
   https://docs.docker.com/develop/develop-images/multistage-build/#use-multi-stage-builds
 Note
 
-register :appname, 'multistage'
-register_docker_image "docklet/#{appname}-try:newest"
-register :base_image, "docklet/#{appname}-try:base"
+register :appname, 'multistage-test'
+register_docker_image "docklet/#{appname}:newest"
+register :base_image, "docklet/#{appname}:base"
 
 write_dockerfile <<~Desc
   FROM alpine:3.7 as base
-  LABEL <%=image_labels%>
   WORKDIR /tmp1
   RUN echo hi from base > hibase
 
@@ -24,7 +23,9 @@ Desc
 task :main do
   system <<~Desc
     docker build --target base -t #{fetch(:base_image)} -f #{dockerfile} #{approot}
+    echo ==in base image 
     docker run --rm #{fetch(:base_image)} cat /tmp1/hibase 
+    echo ==in final image 
     docker run --rm #{docker_image} cat /tmp2/hibase
   Desc
 end
