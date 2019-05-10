@@ -1,5 +1,9 @@
 # docker utils
 
+# dk pull how to get verbose info
+# use --debug in dockerd ?
+# docker --debug run ...
+
 dk(){
   case "$1" in
     rc)
@@ -10,12 +14,14 @@ dk(){
       ;;
   esac
 }
-# docker --debug run ...
 
 alias dki='docker images -a'
 alias dkps="docker ps -a"
 alias dkpl='docker pull'
 #alias dku="docker run --rm -ti ubuntu bash"
+dkgrep(){
+  docker images -a |grep $@
+}
 dku(){
   ${BOOTER_COPS_HOME}/case/ubuntu/1804 sh $@
 }
@@ -46,12 +52,6 @@ function container_id_by_name(){
   [ $# -lt 1 ] && return 1
   name=$1
   docker ps --filter "name=$name" --format "{{.ID}}"
-}
-
-function dktry(){
-  echo ==run:
-  echo   docker run --rm $*
-  docker run -ti --rm $* 
 }
 
 function dksh(){

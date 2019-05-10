@@ -45,3 +45,10 @@ function cops(){
 
 source $BOOTER_COPS_HOME/docker.rc
 source $BOOTER_COPS_HOME/k8s.rc
+
+dkrc(){
+  vi $BOOTER_COPS_HOME/docker.rc
+}
+kbrc(){
+  vi $BOOTER_COPS_HOME/k8s.rc
+}

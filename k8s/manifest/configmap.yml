@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-test-configmap
+  labels:
+    app: cm-test
+data:
+  test: 'test info'
+
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cm-test-pod
+  labels:
+    app: cm-test
+spec:
+  containers:
+  - name: cm-test
+    image: busybox:1.29
+    command: ["/bin/sh", "-c", "env | grep TEST_"]
+    env:
+    - name: TEST_ENV
+      valueFrom:
+        configMapKeyRef:
+          name: cm-test-configmap
+          key: test
+  restartPolicy: Never
+
+# kc create -f this-file
+# kc delete -f this-file

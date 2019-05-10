@@ -45,3 +45,5 @@ __END__
 
 # Deploy
 https://github.com/bundler/gemstash/blob/master/docs/gemstash-deploy.7.md
+
+优先使用国内高速源？？？
