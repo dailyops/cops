@@ -147,7 +147,7 @@ kcns(){
         kc get ns
         return
         ;;
-      reset)
+      d|default|reset)
         ns=$(kc_default_ns)
         ;;
       p|prod)

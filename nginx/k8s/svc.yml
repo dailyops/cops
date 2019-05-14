@@ -1,18 +1,17 @@
  apiVersion: v1  
  kind: Service  
  metadata:  
-   name: ng
+   name: nginx
    labels:  
-     app: ng
-   namespace: default  
+     app: nginx
+   #namespace: default  
  spec:  
    ports:  
-   - name: ng
-     port: 8080  
+   - name: nginx
+     port: 80  
      targetPort: 80  
      protocol: TCP
    selector:  
-     app: ng
+     app: nginx
 
-...
-kubectl create -f ng-svc.yml
+# kubectl create -f svc.yml

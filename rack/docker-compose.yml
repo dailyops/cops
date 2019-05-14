@@ -1,0 +1,10 @@
+version: '2.1'
+services:
+  web:
+    stdin_open: true
+    build: .
+    ports:
+      - 19292:9292
+    restart: on-failure
+
+# build: docker-compose build # rack_web:latest
