@@ -11,6 +11,35 @@ kc_set_config(){
   export KUBECONFIG=$file
 }
 
+# Great kubectl tools
+alias kct=kubectx
+alias kns=kubens
+
+# 开启kc, 默认不加载，因为大部分时间并不是做kc相关的工作
+kcon(){
+  # 所有可用context设置 # kc config view
+  export KUBECONFIG=~/.kubeconfig/local.conf:/jd/jsh/local-jiuzhang-kube.config
+  echo ==设置kc到全集群模式
+
+  # avoid multiple times
+  if [ -z "$SOURCED_KUBE_PS1" ]; then
+    source "/usr/local/opt/kube-ps1/share/kube-ps1.sh"
+    PS1='$(kube_ps1)'$PS1
+    SOURCED_KUBE_PS1=1
+    # kubeoff # -g
+    # kubeon  # -g
+  fi
+  kubeon
+}
+
+# 重置为默认状态，以免误操作
+kcoff(){
+  # 所有可用context设置 # kc config view
+  unset KUBECONFIG
+  kubeoff
+  echo ==重置kc到默认本地环境
+}
+
 # switch cluster context by set KUBECONFIG=xxx
 kcenv(){
   tp=${1} 
@@ -37,7 +66,7 @@ kcenv(){
       ;;
     show|h|help)
       ls -l ~/.kubeconfig
-      echo \$KUBECONFIG=$KUBECONFIG
+      echo ns=$(kc_current_ns) \$KUBECONFIG=$KUBECONFIG
       ;;
     *)
       echo ==unknown type: $tp
@@ -90,6 +119,10 @@ kc(){
   ing|ingress)
     shift
     kc get ingress --all-namespaces -o wide $@
+    ;; 
+  ng)
+    shift
+    kc_ingress_config
     ;; 
   reload)
     #kc patch deployment/turbo-api -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"date\":\"`date +'%s'`\"}}}}}" -nproduction
@@ -201,12 +234,6 @@ kcsh(){
   #kubectl exec $pod -it -- $@
 }
 
-# 自定义列
-# get service -n kube-system -o=custom-columns="NAME:.metadata.name,IP:.spec.clusterIP,PORT:.spec.ports[*].targetPort"
-get_pod_name_by_label(){
-  kubectl get pod --output=custom-columns=Name:.metadata.name --no-headers $@
-}
-
 # phase is just part of pod status
 get_pod_phase(){
   kubectl get pod --output=custom-columns=Name:.status.phase --no-headers $@ 2>/dev/null
@@ -224,18 +251,34 @@ kc_deployment_img(){
 }
 alias kcimg=kc_deployment_img
 
+kcimgs(){
+  kc get -o=jsonpath="{.items[*].spec.containers[0].image}" pod $@
+}
+
+# 自定义列
+# get service -n kube-system -o=custom-columns="NAME:.metadata.name,IP:.spec.clusterIP,PORT:.spec.ports[*].targetPort"
+get_pod_name_by_label(){
+  kubectl get pod --output=custom-columns=Name:.metadata.name --no-headers $@
+}
+
+appsh(){
+  pod=$(kubectl get pod --output=custom-columns=Name:.metadata.name --no-headers -lapp=$@)
+  echo ==sh into pod: $pod
+  kubectl exec -it $pod sh
+}
+
 # deployment name format: postgresql-audit-postgresql
 # pod name format: optimus-sidekiq-slow-3025720494-pdwsx
 # jenkins-67cf45b496-jdgq7
 kc_get_pod(){
   pname=$1
   [[ "$pname" =~ .+-[0-9a-z]+-[^-]+ ]] || {
-    pname=$(kc_pod_from_deploy $pname)
+    pname=$(kc_get_pod_from_deploy $pname)
   }
   echo $pname
 }
 
-kc_pod_from_deploy(){
+kc_get_pod_from_deploy(){
   dname=$1
   shift
   kc get po -l "app=${dname}" -o=jsonpath='{.items[0].metadata.name}' $@
@@ -248,6 +291,11 @@ kc_get_nodes(){
 
 kc_get_domains(){
   kc get ingress --all-namespaces -o jsonpath='{range.items[*]}{"http://"}{@.spec.rules[0].host}{"\t"}{@.metadata.name}{"\t"}{@.metadata.namespace}{"\n"}{end}' $@ | column -t
+}
+
+kc_ingress_config(){
+  pod=$(get_pod_name_by_label -l app.kubernetes.io/name=ingress-nginx -n ingress-nginx)
+  kubectl exec -n ingress-nginx $pod cat /etc/nginx/nginx.conf
 }
 
 alias kctl="kubectl"
@@ -404,6 +452,26 @@ delpod(){
   kubectl delete pod $@ --grace-period=0 --force
 }
 
+## kustomize
+alias km=kustomize
+
+## minikube
+mkb(){
+  tp=$1
+  case "$tp" in
+  ssh)
+    # use ~/.ssh/config
+    ssh minikube.ip
+    ;;
+  log)
+    tail -f ~/.minikube/machines/minikube/minikube/Logs/VBox.log
+    ;;
+  *)
+    minikube $@
+    ;;
+  esac
+}
+
 return 0
 
 ## tips
@@ -416,16 +484,16 @@ delete pod
 kubectl delete pod NAME --grace-period=0 --force
 kubectl delete pod xxx --now 
 
-
 --record
 
 remember config in annotations
 
-
 kc create namespace try
 just a resource
-
 
 合并多个kube config文件
 
 kubectl config view --flatten > new.config
+
+kc delete cm $(kc get cm --output=custom-columns=Name:.metadata.name --no-headers)
+

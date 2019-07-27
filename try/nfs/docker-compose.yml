@@ -1,0 +1,15 @@
+version: '2'
+services:
+  api:
+    image: busybox
+    command: "sleep 6000"
+    volumes:
+      - "nfsmount:/app"
+
+volumes:
+  nfsmount:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=addr=host.docker.internal,rw,nolock,hard,nointr,nfsvers=3
+      device: ":${PWD}"

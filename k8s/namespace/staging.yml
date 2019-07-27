@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   name: staging
   labels:
-    name: development
+    name: staging
 
 #kubectl delete namespaces <insert-some-namespace-name>
 # kubectl create -f ./staging.yml

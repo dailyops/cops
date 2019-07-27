@@ -8,6 +8,7 @@ task :test do
   Desc
 end
 
+desc 'run dailyops app stack'
 task :dailyops do
   system <<~Desc
     dkl netup dailyops

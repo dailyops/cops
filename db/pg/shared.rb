@@ -132,7 +132,7 @@ custom_commands do
   end
   
   private
-    def set_init_config
+    def set_init_configs
       if in_dev?
         password = 'password'
         dbapassword = 'password'

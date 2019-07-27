@@ -49,3 +49,6 @@ PING gateway.docker.internal (192.168.65.1): 56 data bytes
 / # ping -c1 host.docker.internal
 PING host.docker.internal (192.168.65.2): 56 data bytes
 64 bytes from 192.168.65.2: seq=0 ttl=37 time=0.357 ms
+
+docker run --rm alpine nslookup host.docker.internal
+docker run --rm alpine ping host.docker.internal

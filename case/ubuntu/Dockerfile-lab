@@ -1,0 +1,5 @@
+FROM ubuntu:18.04
+MAINTAINER cao7113@hotmail.com
+RUN apt -y update && apt -y install sudo vim-tiny
+
+# todo 做一些实验！！！

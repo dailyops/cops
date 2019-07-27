@@ -1,0 +1,7 @@
+FROM ruby:2.5-alpine3.7
+LABEL maintainer=dailyops built_from=dklet
+RUN apk add build-base sqlite-dev &&       gem install --no-ri --no-rdoc gemstash
+EXPOSE 9292
+VOLUME /root/.gemstash
+ENTRYPOINT ["gemstash"]
+CMD ["start", "--no-daemonize"]

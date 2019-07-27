@@ -1,19 +1,17 @@
  apiVersion: v1  
  kind: Service  
  metadata:  
-   name: nginx
+   name: rackweb
    labels:  
-     app: nginx
-   #namespace: xxx  
+     app: rackweb
+   #namespace: default  
  spec:  
-   #type: NodePort
    ports:  
-   - name: nginx
+   - name: rackweb
      port: 80  
-     targetPort: 80  
+     targetPort: 9292
      protocol: TCP
-     # nodePort: 80
    selector:  
-     app: nginx
+     app: rackweb
 
 # kubectl create -f svc.yml

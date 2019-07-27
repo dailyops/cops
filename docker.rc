@@ -2,7 +2,7 @@
 
 # dk pull how to get verbose info
 # use --debug in dockerd ?
-# docker --debug run ...
+# docker --debug -l debug run ...
 
 dk(){
   case "$1" in
@@ -18,12 +18,13 @@ dk(){
 alias dki='docker images -a'
 alias dkps="docker ps -a"
 alias dkpl='docker pull'
-#alias dku="docker run --rm -ti ubuntu bash"
 dkgrep(){
   docker images -a |grep $@
 }
+#alias dku="docker run --rm -ti ubuntu bash"
 dku(){
-  ${BOOTER_COPS_HOME}/case/ubuntu/1804 sh $@
+  #${BOOTER_COPS_HOME}/case/ubuntu/1804 sh $@
+  dksh ubuntu:18.04
 }
 #/bin/bash -c "while true; do date; sleep 6; done"
 # moby
@@ -55,15 +56,15 @@ function container_id_by_name(){
 }
 
 function dksh(){
-  docker run --rm -it ${1:-alpine:3.7} ${2:-sh}
-}
-
-function dkbsh(){
   docker run --rm -it ${1:-busybox} ${2:-sh}
 }
 
+function dkash(){
+  docker run --rm -it ${1:-alpine:3.7} ${2:-sh}
+}
+
 function dkbash(){
-  docker run --rm -it ${1:-ubuntu} bash
+  docker run --rm -it ${1:-ubuntu:18.04} bash
 }
 
 # 进入容器
@@ -78,6 +79,7 @@ function dkin(){
 
 ## Docker Compose
 alias dcom='docker-compose'
+alias dcomv='docker-compose --verbose'
 
 # 容器清理
 # http://www.doublecloud.org/2015/05/simple-script-to-list-and-remove-all-stopped-docker-containers/
@@ -234,6 +236,12 @@ dklogin(){
   echo $1 | docker login -u cao7113 --password-stdin
 }
 
+# daocloud.io
+daocloudlogin(){
+  [ $# -lt 1 ] && echo require password && return 1
+  echo $1 | docker login -u cao7113 --password-stdin f1361db2.m.daocloud.io
+}
+
 return 0
 
 ## volumes
@@ -245,3 +253,4 @@ linkto user home xxx
 
 docker plugin install --grant-all-permissions vieux/sshfs
 
+docker run --rm alpine nslookup host.docker.internal

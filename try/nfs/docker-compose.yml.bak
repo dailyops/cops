@@ -1,0 +1,19 @@
+version: "3.5"
+
+services:
+  builder:
+    image: busybox
+    command: "sleep 6000"
+    volumes:
+      - "nfsmountCC:/opt1/"    
+      # nfsmountCC is the volume created by docker-compose in the volumes section below.  /opt/ is the mount location inside of the container.
+                                           
+volumes:
+  nfsmountCC:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=host.docker.internal"    
+      # IP of nfs server.  This is also where you put any options '-o' in standard option format
+      device: ":/opt/nfstest"
+      # location on nfs server of file/dir you want to mount

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rackweb
+  # namespace: xxx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rackweb
+  template:
+    metadata:
+      labels:
+        app: rackweb
+    spec:
+      containers:
+      - name: rackweb
+        image: rack_web
+        # imagePullPolicy: IfNotPresent
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9292
+        volumeMounts:
+        - name: project-log
+          mountPath: /opt/testmount
+          readOnly: false
+      volumes:
+      - name: project-log
+        hostPath:
+          # chmod -R 777 /Volumes/vol1 to enable container to write???
+          path: /Volumes/vol1
