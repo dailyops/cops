@@ -12,13 +12,15 @@ kc_set_config(){
 }
 
 # Great kubectl tools
+# brew install kubectx ps1?
 alias kct=kubectx
 alias kns=kubens
 
 # 开启kc, 默认不加载，因为大部分时间并不是做kc相关的工作
 kcon(){
   # 所有可用context设置 # kc config view
-  export KUBECONFIG=~/.kubeconfig/local.conf:/jd/jsh/local-jiuzhang-kube.config
+  export KUBECONFIG=~/.kubeconfig/local.conf
+  # :/jd/jsh/local-jiuzhang-kube.config
   echo ==设置kc到全集群模式
 
   # avoid multiple times
@@ -232,6 +234,14 @@ kcsh(){
   echo ==link to pod: $po_name
   kc exec $po_name -it -- sh
   #kubectl exec $pod -it -- $@
+}
+
+kcrailsc(){
+  [ $# -lt 1 ] && echo require pod or deployment name && return 1
+  kcns
+  po_name=$(kc_get_pod $1)
+  echo ==link to pod: $po_name
+  kc exec $po_name -it -- bundle exec rails c
 }
 
 # phase is just part of pod status
@@ -465,6 +475,20 @@ mkb(){
     ;;
   log)
     tail -f ~/.minikube/machines/minikube/minikube/Logs/VBox.log
+    ;;
+  in|on|ln|link)
+    # https://kubernetes.io/docs/setup/learning-environment/minikube/#use-local-images-by-re-using-the-docker-daemon
+    # use minikube docker daemon as current docker daemon to share docker build context to build image!!! 
+    eval $(minikube docker-env)
+    ;;
+  out|off|unlink)
+    unset DOCKER_TLS_VERIFY DOCKER_HOST DOCKER_CERT_PATH
+    ;;
+  env|show)
+    echo current docker daemon: $DOCKER_HOST $DOCKER_CERT_PATH $DOCKER_TLS_VERIFY
+    ;;
+  size)
+    du -hs ~/.minikube/machines/minikube/
     ;;
   *)
     minikube $@
